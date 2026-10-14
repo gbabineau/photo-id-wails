@@ -17,6 +17,10 @@ Choose **Open quiz** in the desktop app to load a quiz JSON file. Taxonomy is do
 
 At startup, the app reads CSV life lists from the user's `photo-id/have_lists` cache directory. Species found there are marked with a blue dot in quiz details and beside the photo prompt.
 
+## Icon Assets
+
+`build/grackle-avatar.jpg` is the original GitHub Pages avatar. `build/appicon.png` is the square Wails icon source; Wails uses it to generate the Windows icon when `build/windows/icon.ico` is missing.
+
 Photo lookup uses Playwright for Go to load eBird's media catalog in Chromium and complete the Anubis browser challenge. Catalog results and downloaded photo bytes are cached for eight months under the operating system's user cache directory (`photo-id/media` and `photo-id/photos`). Cached catalog results skip Chromium; cached photo bytes are reused when images are displayed. The first uncached search downloads the Playwright driver and Chromium headless shell, so it needs an internet connection. No Python interpreter is needed. eBird may change its catalog markup, which could require updating the result extraction logic.
 
 ## Build
