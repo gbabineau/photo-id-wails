@@ -3,3 +3,6 @@ frontend/dist
 frontend/node_modules
 .vscode/settings.json
 /package-lock.json
+/coverage.out
+/sonar.local.env
+testdata/Argentina

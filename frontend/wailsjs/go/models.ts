@@ -22,6 +22,7 @@ export namespace main {
 	    notes?: string;
 	    Habitat?: string;
 	    taxonOrder?: number;
+	    seenBefore?: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Species(source);
@@ -36,6 +37,7 @@ export namespace main {
 	        this.notes = source["notes"];
 	        this.Habitat = source["Habitat"];
 	        this.taxonOrder = source["taxonOrder"];
+	        this.seenBefore = source["seenBefore"];
 	    }
 	}
 	export class Quiz {

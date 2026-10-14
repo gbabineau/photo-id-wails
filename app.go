@@ -12,7 +12,8 @@ import (
 )
 
 type App struct {
-	ctx context.Context
+	ctx      context.Context
+	haveList map[string]struct{}
 }
 
 type Quiz struct {
@@ -33,6 +34,7 @@ type Species struct {
 	Notes          string   `json:"notes,omitempty"`
 	Habitat        string   `json:"Habitat,omitempty"`
 	TaxonOrder     float64  `json:"taxonOrder,omitempty"`
+	SeenBefore     bool     `json:"seenBefore,omitempty"`
 }
 
 func NewApp() *App {
@@ -41,6 +43,7 @@ func NewApp() *App {
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	a.haveList = loadHaveListFromCache()
 }
 
 func (a *App) OpenQuiz() (*Quiz, error) {
@@ -63,6 +66,7 @@ func (a *App) OpenQuiz() (*Quiz, error) {
 		return nil, err
 	}
 	quiz.Name = quizNameFromPath(path)
+	annotateQuizHaveList(quiz, a.haveList)
 
 	taxonomy, err := loadTaxonomy(a.ctx)
 	if err != nil {
@@ -118,11 +122,20 @@ func loadQuiz(path string) (*Quiz, error) {
 	if len(quiz.Species) == 0 {
 		return nil, fmt.Errorf("quiz has no species")
 	}
+	seenSpecies := make(map[string]struct{}, len(quiz.Species))
+	uniqueSpecies := quiz.Species[:0]
 	for index, species := range quiz.Species {
 		if strings.TrimSpace(species.CommonName) == "" {
 			return nil, fmt.Errorf("species %d is missing comName", index+1)
 		}
+		name := normalizeSpeciesName(species.CommonName)
+		if _, found := seenSpecies[name]; found {
+			continue
+		}
+		seenSpecies[name] = struct{}{}
+		uniqueSpecies = append(uniqueSpecies, species)
 	}
+	quiz.Species = uniqueSpecies
 
 	return &quiz, nil
 }
