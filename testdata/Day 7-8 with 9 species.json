@@ -1,0 +1,185 @@
+{
+    "start_month": 1,
+    "end_month": 2,
+    "location": "AR",
+    "basis": "Trip data automatically generated from trip file",
+    "species": [
+        {
+            "comName": "Spotted Nothura",
+            "frequency": 15.38,
+            "sciName": "Nothura maculosa",
+            "speciesCode": "sponot1",
+            "category": "species",
+            "taxonOrder": 71.0,
+            "bandingCodes": [],
+            "comNameCodes": [
+                "SPNO"
+            ],
+            "sciNameCodes": [
+                "NOMA"
+            ],
+            "order": "Tinamiformes",
+            "familyCode": "tinami1",
+            "familyComName": "Tinamous",
+            "familySciName": "Tinamidae"
+        },
+        {
+            "comName": "Black-necked Stilt",
+            "frequency": 15.41,
+            "sciName": "Himantopus mexicanus",
+            "speciesCode": "bknsti",
+            "category": "species",
+            "taxonOrder": 5770.0,
+            "bandingCodes": [
+                "BNST"
+            ],
+            "comNameCodes": [
+                "BWST",
+                "BNBS"
+            ],
+            "sciNameCodes": [
+                "HIME"
+            ],
+            "order": "Charadriiformes",
+            "familyCode": "recurv1",
+            "familyComName": "Stilts and Avocets",
+            "familySciName": "Recurvirostridae"
+        },
+        {
+            "comName": "Long-winged Harrier",
+            "notes": "Mentioned in trip data",
+            "sciName": "Circus buffoni",
+            "speciesCode": "lowhar1",
+            "category": "species",
+            "taxonOrder": 8318.0,
+            "bandingCodes": [
+                "LWHA"
+            ],
+            "comNameCodes": [],
+            "sciNameCodes": [
+                "CIBU"
+            ],
+            "order": "Accipitriformes",
+            "familyCode": "accipi1",
+            "familyComName": "Hawks, Eagles, and Kites",
+            "familySciName": "Accipitridae"
+        },
+        {
+            "comName": "Burrowing Owl",
+            "frequency": 17.95,
+            "sciName": "Athene cunicularia",
+            "speciesCode": "burowl",
+            "category": "species",
+            "taxonOrder": 9133.0,
+            "bandingCodes": [
+                "BUOW"
+            ],
+            "comNameCodes": [],
+            "sciNameCodes": [
+                "ATCU"
+            ],
+            "order": "Strigiformes",
+            "familyCode": "strigi1",
+            "familyComName": "Owls",
+            "familySciName": "Strigidae"
+        },
+        {
+            "comName": "Chimango Caracara",
+            "frequency": 66.82,
+            "sciName": "Daptrius chimango",
+            "speciesCode": "chicar1",
+            "category": "species",
+            "taxonOrder": 11970.0,
+            "bandingCodes": [],
+            "comNameCodes": [
+                "CHCA"
+            ],
+            "sciNameCodes": [
+                "DACH"
+            ],
+            "order": "Falconiformes",
+            "familyCode": "falcon1",
+            "familyComName": "Falcons and Caracaras",
+            "familySciName": "Falconidae"
+        },
+        {
+            "comName": "Peregrine Falcon",
+            "frequency": 30.87,
+            "sciName": "Falco peregrinus",
+            "speciesCode": "perfal",
+            "category": "species",
+            "taxonOrder": 12114.0,
+            "bandingCodes": [
+                "PEFA"
+            ],
+            "comNameCodes": [],
+            "sciNameCodes": [
+                "FAPE"
+            ],
+            "order": "Falconiformes",
+            "familyCode": "falcon1",
+            "familyComName": "Falcons and Caracaras",
+            "familySciName": "Falconidae"
+        },
+        {
+            "comName": "Burrowing Parakeet",
+            "frequency": 92.54,
+            "notes": "Mentioned in trip data",
+            "sciName": "Cyanoliseus patagonus",
+            "speciesCode": "burpar",
+            "category": "species",
+            "taxonOrder": 13081.0,
+            "bandingCodes": [],
+            "comNameCodes": [
+                "BUPA"
+            ],
+            "sciNameCodes": [
+                "CYPA"
+            ],
+            "order": "Psittaciformes",
+            "familyCode": "psitta3",
+            "familyComName": "New World and African Parrots",
+            "familySciName": "Psittacidae"
+        },
+        {
+            "comName": "Firewood-gatherer",
+            "notes": "Mentioned in trip data",
+            "sciName": "Anumbius annumbi",
+            "speciesCode": "firgat1",
+            "category": "species",
+            "taxonOrder": 15371.0,
+            "bandingCodes": [],
+            "comNameCodes": [
+                "FIGA"
+            ],
+            "sciNameCodes": [
+                "ANAN"
+            ],
+            "order": "Passeriformes",
+            "familyCode": "furnar2",
+            "familyComName": "Ovenbirds and Woodcreepers",
+            "familySciName": "Furnariidae"
+        },
+        {
+            "comName": "Southern Martin",
+            "frequency": 77.05,
+            "sciName": "Progne elegans",
+            "speciesCode": "soumar",
+            "category": "species",
+            "taxonOrder": 24097.0,
+            "bandingCodes": [
+                "SOMA"
+            ],
+            "comNameCodes": [],
+            "sciNameCodes": [
+                "PREL"
+            ],
+            "order": "Passeriformes",
+            "familyCode": "hirund2",
+            "familyComName": "Swallows",
+            "familySciName": "Hirundinidae"
+        }
+    ],
+    "day": "7-8",
+    "notes": "Full: El Condor."
+}

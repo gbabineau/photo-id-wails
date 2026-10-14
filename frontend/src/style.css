@@ -1,0 +1,31 @@
+:root {
+    font-family: "Nunito", "Segoe UI", sans-serif;
+    color: #243b31;
+    background: #f1f4ef;
+    font-synthesis: weight;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-weight: 400;
+    color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+    width: 100%;
+    min-width: 360px;
+    min-height: 100%;
+    margin: 0;
+}
+
+body { min-height: 100vh; }
+button, a { -webkit-tap-highlight-color: transparent; }
+button:focus-visible, a:focus-visible { outline: 3px solid #a3bf5e; outline-offset: 3px; }
+
+@font-face {
+    font-family: "Nunito";
+    font-style: normal;
+    font-weight: 400;
+    src: url("assets/fonts/nunito-v16-latin-regular.woff2") format("woff2");
+}

@@ -1,0 +1,23 @@
+{
+    "start_month": 2,
+    "end_month": 2,
+    "location": "EC",
+    "species": [
+        {
+            "comName": "Giant Cowbird"
+        },
+        {
+            "comName": "White-rumped Swift",
+            "frequency": 10
+        },
+        {
+            "comName": "Ortolan Bunting",
+            "notes": "some notes"
+        },
+        {
+            "comName": "Little Bunting",
+            "frequency": 1,
+            "notes": "more notes"
+        }
+    ]
+}
