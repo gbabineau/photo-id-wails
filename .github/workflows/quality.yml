@@ -81,6 +81,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: https://sonarcloud.io
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
