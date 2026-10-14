@@ -32,6 +32,7 @@ h1 { margin-bottom: 12px; color: #1d342c; font-family: Georgia, 'Times New Roman
 .summary-label { color: #708276; }
 .summary-item strong { color: #243b31; font-size: 16px; }
 .quiz-notes { margin: 18px 0 0; color: #617368; font-size: 13px; }
+.game-notes { max-width: 820px; margin: -8px 0 18px; line-height: 1.55; }
 .species-section { margin-top: 38px; }
 .list-heading { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 16px; }
 .list-heading h2 { margin: 5px 0 0; color: #20372e; font-family: Georgia, 'Times New Roman', serif; font-size: 28px; font-weight: 500; }
@@ -41,7 +42,9 @@ h1 { margin-bottom: 12px; color: #1d342c; font-family: Georgia, 'Times New Roman
 .species-row { display: grid; grid-template-columns: 44px minmax(180px, 1.2fr) minmax(150px, 1fr) 150px; align-items: center; gap: 14px; min-height: 76px; border-bottom: 1px solid #cdd6cb; }
 .species-index { color: #829581; font-family: Georgia, serif; font-size: 18px; }
 .species-name { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.species-name-primary { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .species-name strong { color: #243b31; font-size: 15px; }
+.seen-dot { display: inline-block; width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: #2878b7; }
 .species-name span, .species-details, .species-link { color: #718075; font-size: 12px; }
 .species-details { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .species-details span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -62,7 +65,9 @@ h1 { margin-bottom: 12px; color: #1d342c; font-family: Georgia, 'Times New Roman
 .photo-controls button:hover:not(:disabled) { background: #e8eee5; }
 .photo-controls button:disabled { opacity: 0.45; cursor: default; }
 .answer-area { display: flex; flex-direction: column; gap: 7px; padding: 8px 0 2px; }
-.answer-area label { color: #50665a; font-size: 11px; font-weight: 750; }
+.answer-area label { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px 10px; color: #50665a; font-size: 11px; font-weight: 750; }
+.answer-prompt { display: inline-flex; align-items: center; gap: 7px; }
+.answer-frequency { color: #718075; font-size: 10px; font-weight: 600; white-space: nowrap; }
 .answer-area select { width: 100%; min-height: 39px; padding: 0 10px; border: 1px solid #bfcbbf; border-radius: 2px; color: #243b31; background: #fff; font: inherit; font-size: 13px; }
 .answer-area select.answer-correct { border-color: #528368; background: #eaf2e9; }
 .answer-area select.answer-incorrect { border-color: #c2765c; background: #fbefea; }

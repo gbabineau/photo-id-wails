@@ -11,6 +11,7 @@ type Species = {
     frequency?: number;
     notes?: string;
     Habitat?: string;
+    seenBefore?: boolean;
 };
 
 type Quiz = {
@@ -174,6 +175,7 @@ function App() {
                                 <button className="secondary-button" onClick={() => setIsPlaying(false)}>Quiz details</button>
                             </div>
                         </section>
+                        {quiz.notes && <p className="quiz-notes game-notes">{quiz.notes}</p>}
                         {photoWarnings.length > 0 && (
                             <div className="media-notice">{photoWarnings.join(' · ')}</div>
                         )}
@@ -206,7 +208,15 @@ function App() {
                                             <button aria-label="Next photo" disabled={images.length < 2} onClick={() => setImageIndexes((current) => ({ ...current, [speciesKey]: (imageIndex + 1) % images.length }))}>Next</button>
                                         </div>
                                         <div className="answer-area">
-                                            <label htmlFor={`answer-${index}`}>Identify this bird</label>
+                                            <label htmlFor={`answer-${index}`}>
+                                                <span className="answer-prompt">
+                                                    {species.seenBefore && <span className="seen-dot" role="img" aria-label="Seen before" title="Seen before" />}
+                                                    Identify this bird
+                                                </span>
+                                                {typeof species.frequency === 'number' && Number.isFinite(species.frequency) && (
+                                                    <span className="answer-frequency">Frequency: {species.frequency.toFixed(2)}%</span>
+                                                )}
+                                            </label>
                                             <select
                                                 id={`answer-${index}`}
                                                 className={answer ? (isCorrect ? 'answer-correct' : 'answer-incorrect') : ''}
@@ -260,7 +270,10 @@ function App() {
                                     <li className="species-row" key={`${species.comName}-${index}`}>
                                         <span className="species-index">{String(index + 1).padStart(2, '0')}</span>
                                         <div className="species-name">
-                                            <strong>{species.comName}</strong>
+                                            <div className="species-name-primary">
+                                                {species.seenBefore && <span className="seen-dot" role="img" aria-label="Seen before" title="Seen before" />}
+                                                <strong>{species.comName}</strong>
+                                            </div>
                                             {species.sciName && <span>{species.sciName}</span>}
                                         </div>
                                         <div className="species-details">

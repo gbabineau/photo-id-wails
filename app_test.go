@@ -33,6 +33,37 @@ func TestQuizNameFromPathRemovesJSONExtension(t *testing.T) {
 	}
 }
 
+func TestAddHaveListCSVAnnotatesQuizSpecies(t *testing.T) {
+	const haveListCSV = "Row #,Category,Common Name,Scientific Name\n1,species,\"Vaux's Swift\",Chaetura vauxi\n2,species,Marbled Murrelet,Brachyramphus marmoratus\n"
+	haveList := make(map[string]struct{})
+	if err := addHaveListCSV(strings.NewReader(haveListCSV), haveList); err != nil {
+		t.Fatalf("parse have-list CSV: %v", err)
+	}
+	quiz := &Quiz{Species: []Species{
+		{CommonName: "  VAUX'S   SWIFT "},
+		{CommonName: "Giant Cowbird"},
+	}}
+	annotateQuizHaveList(quiz, haveList)
+	if !quiz.Species[0].SeenBefore || quiz.Species[1].SeenBefore {
+		t.Fatalf("unexpected seen-before annotations: %+v", quiz.Species)
+	}
+}
+
+func TestLoadQuizReadsUppercaseNotesKey(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "quiz.json")
+	contents := `{"Notes":"Around the lodge","species":[{"comName":"Giant Cowbird"}]}`
+	if err := os.WriteFile(path, []byte(contents), 0o600); err != nil {
+		t.Fatalf("write quiz file: %v", err)
+	}
+	quiz, err := loadQuiz(path)
+	if err != nil {
+		t.Fatalf("load quiz with uppercase Notes: %v", err)
+	}
+	if quiz.Notes != "Around the lodge" {
+		t.Fatalf("unexpected quiz notes: %q", quiz.Notes)
+	}
+}
+
 func TestLoadQuizRejectsMalformedOrEmptyQuiz(t *testing.T) {
 	for name, contents := range map[string]string{
 		"malformed": `{"species":[`,
