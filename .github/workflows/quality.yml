@@ -19,7 +19,7 @@ concurrency:
 jobs:
   build-and-test:
     name: Build and test
-    runs-on: windows-latest
+    runs-on: ubunto-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
@@ -47,15 +47,16 @@ jobs:
         working-directory: frontend
         run: npm run build
 
-      - name: Check Go formatting
-        shell: pwsh
-        run: |
-          $files = @(Get-ChildItem -Path . -Filter '*.go' -File | ForEach-Object FullName)
-          $unformatted = gofmt -l $files
-          if ($unformatted) {
-            Write-Output $unformatted
-            throw 'Go files must be formatted with gofmt.'
-          }
+    #   - name: Check Go formatting
+    # Change this to linux
+    #     shell: pwsh
+    #     run: |
+    #       $files = @(Get-ChildItem -Path . -Filter '*.go' -File | ForEach-Object FullName)
+    #       $unformatted = gofmt -l $files
+    #       if ($unformatted) {
+    #         Write-Output $unformatted
+    #         throw 'Go files must be formatted with gofmt.'
+    #       }
 
       - name: Run go vet
         run: go vet ./...
