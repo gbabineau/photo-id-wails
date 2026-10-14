@@ -20,3 +20,13 @@ Photo lookup uses Playwright for Go to load eBird's media catalog in Chromium an
 ## Build
 
 Run `wails build` from the project root to build the desktop application for the current platform. Build each release on its target platform with that platform's Wails prerequisites installed.
+
+## GitHub Actions
+
+The `Quality checks` workflow runs on pushes to every branch and pull requests targeting `main`. It builds the frontend, checks Go formatting, runs `go vet` and unit tests with coverage, and runs the gated eBird live test as an integration-test stub (it is skipped unless `PHOTO_ID_LIVE_MEDIA_TEST=1`).
+
+SonarQube Cloud analysis is configured in `sonar-project.properties`. Create or bind this repository as a project in SonarQube Cloud, then add its token as the GitHub Actions secret `SONAR_TOKEN` to enable scans. The scan waits for the quality gate. Until the secret is configured, the SonarQube job succeeds with a notice that the scan was skipped. For a self-hosted SonarQube Server, set the `SONAR_HOST_URL` repository variable and update `sonar-project.properties` for that server.
+
+For a local `act` experiment, put a token you already have in the ignored root file `sonar.local.env` as `SONAR_TOKEN=...`, then pass it with `act --secret-file sonar.local.env`. Do not paste the token into chat or commit that file. `act` needs Docker and cannot faithfully reproduce this workflow's `windows-latest` job; use GitHub Actions for the end-to-end test. GitHub does not reveal a secret's saved value, so generate a new SonarQube token if you no longer have it.
+
+To block merges when checks fail, add a branch protection rule or ruleset for `main` in GitHub and require the `Build and test` and `SonarQube` checks. Configure the Sonar token before making the SonarQube check a required status.
