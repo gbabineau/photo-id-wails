@@ -19,7 +19,7 @@ concurrency:
 jobs:
   build-and-test:
     name: Build and test
-    runs-on: ubunto-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
