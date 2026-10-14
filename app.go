@@ -122,11 +122,20 @@ func loadQuiz(path string) (*Quiz, error) {
 	if len(quiz.Species) == 0 {
 		return nil, fmt.Errorf("quiz has no species")
 	}
+	seenSpecies := make(map[string]struct{}, len(quiz.Species))
+	uniqueSpecies := quiz.Species[:0]
 	for index, species := range quiz.Species {
 		if strings.TrimSpace(species.CommonName) == "" {
 			return nil, fmt.Errorf("species %d is missing comName", index+1)
 		}
+		name := normalizeSpeciesName(species.CommonName)
+		if _, found := seenSpecies[name]; found {
+			continue
+		}
+		seenSpecies[name] = struct{}{}
+		uniqueSpecies = append(uniqueSpecies, species)
 	}
+	quiz.Species = uniqueSpecies
 
 	return &quiz, nil
 }

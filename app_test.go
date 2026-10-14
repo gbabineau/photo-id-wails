@@ -64,6 +64,24 @@ func TestLoadQuizReadsUppercaseNotesKey(t *testing.T) {
 	}
 }
 
+func TestLoadQuizRemovesDuplicateCommonNamesKeepingFirst(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "quiz.json")
+	contents := `{"species":[{"comName":"Common Kestrel","frequency":12,"notes":"first"},{"comName":" common   kestrel ","frequency":99,"notes":"duplicate"},{"comName":"Lesser Kestrel"}]}`
+	if err := os.WriteFile(path, []byte(contents), 0o600); err != nil {
+		t.Fatalf("write quiz file: %v", err)
+	}
+	quiz, err := loadQuiz(path)
+	if err != nil {
+		t.Fatalf("load quiz with duplicate species: %v", err)
+	}
+	if len(quiz.Species) != 2 {
+		t.Fatalf("expected 2 unique species, got %d", len(quiz.Species))
+	}
+	if quiz.Species[0].CommonName != "Common Kestrel" || quiz.Species[0].Notes != "first" || quiz.Species[0].Frequency == nil || *quiz.Species[0].Frequency != 12 {
+		t.Fatalf("first species entry was not retained: %+v", quiz.Species[0])
+	}
+}
+
 func TestLoadQuizRejectsMalformedOrEmptyQuiz(t *testing.T) {
 	for name, contents := range map[string]string{
 		"malformed": `{"species":[`,
