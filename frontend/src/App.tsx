@@ -114,6 +114,7 @@ function App() {
                 .catch((error_) => setPhotoLoadErrors((current) => ({
                     ...current,
                     [imageURL]: error_ instanceof Error ? error_.message : String(error_),
+
                 })));
         }
     }, [quiz, photoResult, imageIndexes, isPlaying]);
