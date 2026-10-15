@@ -3,13 +3,16 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io"
+	"io/fs"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 )
 
 const eBirdTaxonomyURL = "https://api.ebird.org/v2/ref/taxonomy/ebird?fmt=json&locale=en"
@@ -32,21 +35,29 @@ func loadTaxonomy(ctx context.Context) ([]Taxon, error) {
 		return nil, fmt.Errorf("find user cache directory: %w", err)
 	}
 	cachePath := filepath.Join(cacheDirectory, "photo-id", "taxonomy.json")
-	taxonomy, err := readTaxonomy(cachePath)
-	if err == nil {
-		return taxonomy, nil
+	cached, readErr := readTaxonomy(cachePath)
+	if readErr == nil && taxonomyCacheIsFresh(cachePath, taxonomyNow()) {
+		return cached, nil
 	}
-	if !os.IsNotExist(err) {
-		return nil, err
+	if readErr != nil && !errors.Is(readErr, fs.ErrNotExist) {
+		return nil, readErr
 	}
 
 	apiKey := strings.TrimSpace(os.Getenv("EBIRDAPIKEY"))
 	if apiKey == "" {
+		if readErr == nil {
+			slog.Warn("taxonomy cache is past its refresh date but no API key is set; using it", "envVar", "EBIRDAPIKEY")
+			return cached, nil
+		}
 		return nil, fmt.Errorf("taxonomy cache not found; set EBIRDAPIKEY or EBIRD_TAXONOMY_PATH")
 	}
 
 	data, taxonomy, err := downloadTaxonomy(ctx, apiKey, http.DefaultClient, eBirdTaxonomyURL)
 	if err != nil {
+		if readErr == nil {
+			slog.Warn("taxonomy refresh failed; using older cache", "error", err)
+			return cached, nil
+		}
 		return nil, err
 	}
 	if err := os.MkdirAll(filepath.Dir(cachePath), 0o700); err != nil {
@@ -56,6 +67,31 @@ func loadTaxonomy(ctx context.Context) ([]Taxon, error) {
 		return nil, fmt.Errorf("save taxonomy cache: %w", err)
 	}
 	return taxonomy, nil
+}
+
+var taxonomyNow = time.Now
+
+func taxonomyCacheIsFresh(path string, at time.Time) bool {
+	info, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	return taxonomyFreshAt(info.ModTime(), at)
+}
+
+// taxonomyFreshAt reports whether a taxonomy downloaded at cachedAt is still current at the given time.
+// eBird publishes a new taxonomy in late October, so a download is good until Oct 25. A download
+// made during the Oct 25-31 window may predate the release and is replaced once, from Nov 1.
+func taxonomyFreshAt(cachedAt, at time.Time) bool {
+	cutoff := time.Date(at.Year(), time.October, 25, 0, 0, 0, 0, at.Location())
+	if at.Before(cutoff) {
+		cutoff = cutoff.AddDate(-1, 0, 0)
+	}
+	if cachedAt.Before(cutoff) {
+		return false
+	}
+	windowEnd := time.Date(cutoff.Year(), time.November, 1, 0, 0, 0, 0, at.Location())
+	return !(cachedAt.Before(windowEnd) && !at.Before(windowEnd))
 }
 
 func readTaxonomy(path string) ([]Taxon, error) {
@@ -71,24 +107,9 @@ func readTaxonomy(path string) ([]Taxon, error) {
 }
 
 func downloadTaxonomy(ctx context.Context, apiKey string, client *http.Client, endpoint string) ([]byte, []Taxon, error) {
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-	if err != nil {
-		return nil, nil, fmt.Errorf("create taxonomy request: %w", err)
-	}
-	request.Header.Set("X-eBirdApiToken", apiKey)
-
-	response, err := client.Do(request)
+	data, err := ebirdGet(ctx, client, apiKey, endpoint)
 	if err != nil {
 		return nil, nil, fmt.Errorf("download eBird taxonomy: %w", err)
-	}
-	defer response.Body.Close()
-	if response.StatusCode != http.StatusOK {
-		return nil, nil, fmt.Errorf("download eBird taxonomy: %s", response.Status)
-	}
-
-	data, err := io.ReadAll(io.LimitReader(response.Body, 64<<20))
-	if err != nil {
-		return nil, nil, fmt.Errorf("read eBird taxonomy response: %w", err)
 	}
 	var taxonomy []Taxon
 	if err := json.Unmarshal(data, &taxonomy); err != nil {
