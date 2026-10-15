@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { GetPhotoDataURL, LoadQuizPhotos, OpenQuiz, OpenRecentQuiz } from '../wailsjs/go/main/App';
 import { main } from '../wailsjs/go/models';
 import { EventsOn } from '../wailsjs/runtime/runtime';
+import grackleAvatar from './assets/images/grackle-avatar.jpg';
 import './App.css';
 
 type Species = {
@@ -114,7 +115,6 @@ function App() {
                 .catch((error_) => setPhotoLoadErrors((current) => ({
                     ...current,
                     [imageURL]: error_ instanceof Error ? error_.message : String(error_),
-
                 })));
         }
     }, [quiz, photoResult, imageIndexes, isPlaying]);
@@ -206,7 +206,9 @@ function App() {
         <div className="app-shell">
             <header className="topbar">
                 <div className="brand-lockup">
-                    <span className="brand-mark" aria-hidden="true">P</span>
+                    <span className="brand-mark">
+                        <img src={grackleAvatar} alt="Grackle" />
+                    </span>
                     <span className="brand-name">PHOTO ID</span>
                 </div>
                 <span className="topbar-label">FIELD QUIZ</span>

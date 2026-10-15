@@ -1,7 +1,8 @@
 .app-shell { min-height: 100vh; background: #f1f4ef; }
 .topbar { height: 68px; display: flex; align-items: center; gap: 28px; padding: 0 5.5vw; color: #f6f7ef; background: #183f35; }
 .brand-lockup { display: flex; align-items: center; gap: 11px; }
-.brand-mark { display: grid; width: 30px; height: 30px; place-items: center; border: 1px solid #94b76b; color: #d9eb91; font-family: Georgia, serif; font-size: 18px; font-style: italic; }
+.brand-mark { display: block; width: 30px; height: 30px; flex: 0 0 30px; overflow: hidden; border: 1px solid #94b76b; }
+.brand-mark img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .brand-name, .topbar-label, .eyebrow, .section-label, .summary-label, .list-heading > span, .species-link > span { font-size: 10px; font-weight: 800; letter-spacing: 1.2px; }
 .brand-name { font-size: 12px; }
 .topbar-label { color: #b4c9b0; }
