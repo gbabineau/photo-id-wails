@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { GetPhotoDataURL, LoadQuizPhotos, OpenQuiz } from '../wailsjs/go/main/App';
+import { GetPhotoDataURL, LoadQuizPhotos, OpenQuiz, OpenRecentQuiz } from '../wailsjs/go/main/App';
 import { main } from '../wailsjs/go/models';
 import { EventsOn } from '../wailsjs/runtime/runtime';
 import './App.css';
@@ -16,12 +16,19 @@ type Species = {
 
 type Quiz = {
     name: string;
+    path: string;
     start_month: number;
     end_month: number;
     location: string;
     notes: string;
     species: Species[];
     taxonomyWarning?: string;
+};
+
+type RecentQuiz = {
+    name: string;
+    path: string;
+    lastRun: number;
 };
 
 type PhotoResult = {
@@ -41,6 +48,30 @@ const months = [
     'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
+const recentQuizStorageKey = 'photo-id.recent-quizzes.v1';
+const maxRecentQuizzes = 10;
+
+function readRecentQuizzes(): RecentQuiz[] {
+    try {
+        const stored: unknown = JSON.parse(window.localStorage.getItem(recentQuizStorageKey) || '[]');
+        if (!Array.isArray(stored)) return [];
+        return stored.filter((item): item is RecentQuiz => {
+            if (typeof item !== 'object' || item === null) return false;
+            const recent = item as Partial<RecentQuiz>;
+            return typeof recent.name === 'string'
+                && typeof recent.path === 'string'
+                && typeof recent.lastRun === 'number'
+                && Number.isFinite(recent.lastRun);
+        }).slice(0, maxRecentQuizzes);
+    } catch {
+        return [];
+    }
+}
+
+function formatRecentDate(timestamp: number): string {
+    return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(timestamp);
+}
+
 function App() {
     const [quiz, setQuiz] = useState<Quiz | null>(null);
     const [photoResult, setPhotoResult] = useState<PhotoResult | null>(null);
@@ -53,12 +84,22 @@ function App() {
     const [photoProgress, setPhotoProgress] = useState('');
     const [photoDataURLs, setPhotoDataURLs] = useState<Record<string, string>>({});
     const [photoLoadErrors, setPhotoLoadErrors] = useState<Record<string, string>>({});
+    const [recentQuizzes, setRecentQuizzes] = useState<RecentQuiz[]>(readRecentQuizzes);
     const requestedPhotoURLs = useRef(new Set<string>());
+    const photoSearchRun = useRef(0);
 
     useEffect(() => EventsOn('photo-search-progress', (progress: PhotoProgress) => {
         const position = progress.current > 0 ? `${progress.current}/${progress.total} ${progress.species}` : '';
         setPhotoProgress([position, progress.stage].filter(Boolean).join(' · '));
     }), []);
+
+    useEffect(() => {
+        try {
+            window.localStorage.setItem(recentQuizStorageKey, JSON.stringify(recentQuizzes));
+        } catch {
+            return;
+        }
+    }, [recentQuizzes]);
 
     useEffect(() => {
         if (!quiz || !photoResult || !isPlaying) return;
@@ -82,13 +123,7 @@ function App() {
         setIsOpening(true);
         try {
             const loaded = await OpenQuiz() as Quiz | null;
-            if (loaded) {
-                setQuiz(loaded);
-                setPhotoResult(null);
-                setImageIndexes({});
-                setAnswers({});
-                setIsPlaying(false);
-            }
+            if (loaded) await startQuiz(loaded);
         } catch (caught) {
             setError(caught instanceof Error ? caught.message : String(caught));
         } finally {
@@ -96,30 +131,67 @@ function App() {
         }
     }
 
-    async function findPhotos() {
-        if (!quiz) return;
-        const missingCodes = quiz.species.filter((species) => !species.speciesCode).map((species) => species.comName);
-        if (missingCodes.length > 0) {
-            setError(quiz.taxonomyWarning || `eBird species codes are unavailable for: ${missingCodes.join(', ')}. Configure the taxonomy path, then reopen the quiz.`);
-            return;
-        }
+    async function openRecentQuiz(path: string) {
         setError('');
-        setIsFindingPhotos(true);
-        setPhotoProgress('Starting photo search');
+        setIsOpening(true);
         try {
-            const result = await LoadQuizPhotos(main.Quiz.createFrom(quiz)) as PhotoResult;
-            setPhotoResult(result);
-            setImageIndexes({});
-            setAnswers({});
-            if (Object.values(result.photos).some((images) => images.length > 0)) {
-                setIsPlaying(true);
-            }
+            const loaded = await OpenRecentQuiz(path) as Quiz;
+            await startQuiz(loaded);
         } catch (caught) {
             setError(caught instanceof Error ? caught.message : String(caught));
         } finally {
-            setIsFindingPhotos(false);
-            setPhotoProgress('');
+            setIsOpening(false);
         }
+    }
+
+    async function startQuiz(quizToStart: Quiz) {
+        const searchRun = ++photoSearchRun.current;
+        setQuiz(quizToStart);
+        setPhotoResult({ photos: {}, warnings: [] });
+        setImageIndexes({});
+        setAnswers({});
+        setError('');
+        setIsPlaying(true);
+        setIsFindingPhotos(true);
+
+        const missingCodes = quizToStart.species.filter((species) => !species.speciesCode).map((species) => species.comName);
+        if (missingCodes.length > 0) {
+            const warning = quizToStart.taxonomyWarning || `eBird species codes are unavailable for: ${missingCodes.join(', ')}. Configure the taxonomy path, then reopen the quiz.`;
+            setPhotoResult({ photos: {}, warnings: [warning] });
+            setIsFindingPhotos(false);
+            return;
+        }
+        setPhotoProgress('Starting photo search');
+        try {
+            const result = await LoadQuizPhotos(main.Quiz.createFrom(quizToStart)) as PhotoResult;
+            if (photoSearchRun.current !== searchRun) return;
+            setPhotoResult(result);
+            setImageIndexes({});
+            setAnswers({});
+            const recentEntry = { name: quizToStart.name, path: quizToStart.path, lastRun: Date.now() };
+            setRecentQuizzes((current) => [recentEntry, ...current.filter((item) => item.path !== recentEntry.path)].slice(0, maxRecentQuizzes));
+        } catch (caught) {
+            if (photoSearchRun.current !== searchRun) return;
+            setError(caught instanceof Error ? caught.message : String(caught));
+            setPhotoResult({ photos: {}, warnings: [caught instanceof Error ? caught.message : String(caught)] });
+        } finally {
+            if (photoSearchRun.current === searchRun) {
+                setIsFindingPhotos(false);
+                setPhotoProgress('');
+            }
+        }
+    }
+
+    function endQuiz() {
+        photoSearchRun.current += 1;
+        setQuiz(null);
+        setPhotoResult(null);
+        setImageIndexes({});
+        setAnswers({});
+        setError('');
+        setIsPlaying(false);
+        setIsFindingPhotos(false);
+        setPhotoProgress('');
     }
 
     const period = quiz
@@ -137,9 +209,7 @@ function App() {
                     <span className="brand-name">PHOTO ID</span>
                 </div>
                 <span className="topbar-label">FIELD QUIZ</span>
-                <button className="open-button" onClick={openQuiz} disabled={isOpening}>
-                    {isOpening ? 'Opening...' : 'Open quiz'}
-                </button>
+                {quiz && <button className="open-button" onClick={endQuiz}>End Quiz</button>}
             </header>
 
             <main className="main-content">
@@ -150,10 +220,28 @@ function App() {
                         <div className="empty-layout">
                             <div>
                                 <h1>Choose a quiz file</h1>
-                                <p className="empty-copy">Open a JSON quiz to review its species, season, and region.</p>
+                                <p className="empty-copy">Open a quiz to review expected bird species.</p>
                                 <button className="primary-button" onClick={openQuiz} disabled={isOpening}>
                                     {isOpening ? 'Opening...' : 'Browse quiz files'}
                                 </button>
+                                {recentQuizzes.length > 0 && (
+                                    <section className="recent-quizzes" aria-label="Recent quizzes">
+                                        <div className="recent-quizzes-heading">
+                                            <p className="section-label">RECENT QUIZZES</p>
+                                            <span>LAST {recentQuizzes.length}</span>
+                                        </div>
+                                        <ol className="recent-quiz-list">
+                                            {recentQuizzes.map((recent) => (
+                                                <li key={recent.path}>
+                                                    <button className="recent-quiz-button" onClick={() => openRecentQuiz(recent.path)} disabled={isOpening || isFindingPhotos}>
+                                                        <strong>{recent.name}</strong>
+                                                        <time dateTime={new Date(recent.lastRun).toISOString()}>{formatRecentDate(recent.lastRun)}</time>
+                                                    </button>
+                                                </li>
+                                            ))}
+                                        </ol>
+                                    </section>
+                                )}
                             </div>
                             <div className="field-stamp" aria-hidden="true">
                                 <span>OBSERVATION</span><strong>01</strong><span>SPECIES SET</span>
@@ -243,8 +331,8 @@ function App() {
                                 <p className="section-label">REGION {quiz.location || 'NOT SET'}</p>
                                 <h1>Quiz details for {quiz.name || 'Untitled quiz'}</h1>
                             </div>
-                            <button className="primary-button" onClick={findPhotos} disabled={isFindingPhotos}>
-                                {isFindingPhotos ? (photoProgress || 'Finding photos...') : 'Start Quiz'}
+                            <button className="primary-button" onClick={() => startQuiz(quiz)} disabled={isFindingPhotos}>
+                                {isFindingPhotos ? (photoProgress || 'Finding photos...') : 'Return to Quiz'}
                             </button>
                         </section>
                         <section className="summary-strip" aria-label="Quiz details">

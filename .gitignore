@@ -5,4 +5,5 @@ frontend/node_modules
 /package-lock.json
 /coverage.out
 /sonar.local.env
+/.scannerwork/
 testdata/Argentina
