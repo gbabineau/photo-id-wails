@@ -10,7 +10,7 @@ $env:SONAR_TOKEN = $line.Substring('SONAR_TOKEN='.Length).Trim().Trim('"')
 $env:SONAR_HOST_URL = 'https://sonarcloud.io'
 
 Push-Location frontend
-npm ci
+npm ci --ignore-scripts
 npm run build
 Pop-Location
 
