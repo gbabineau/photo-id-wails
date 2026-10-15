@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { GetPhotoDataURL, LoadQuizPhotos, OpenQuiz, OpenRecentQuiz } from '../wailsjs/go/main/App';
 import { main } from '../wailsjs/go/models';
 import { EventsOn } from '../wailsjs/runtime/runtime';
+import grackleAvatar from './assets/images/grackle-avatar.jpg';
 import './App.css';
 
 type Species = {
@@ -111,9 +112,9 @@ function App() {
             requestedPhotoURLs.current.add(imageURL);
             GetPhotoDataURL(imageURL)
                 .then((dataURL) => setPhotoDataURLs((current) => ({ ...current, [imageURL]: dataURL })))
-                .catch((error_) => setPhotoLoadErrors((current) => ({
+                .catch((error) => setPhotoLoadErrors((current) => ({
                     ...current,
-                    [imageURL]: error_ instanceof Error ? error_.message : String(error_),
+                    [imageURL]: error instanceof Error ? error.message : String(error),
                 })));
         }
     }, [quiz, photoResult, imageIndexes, isPlaying]);
@@ -124,8 +125,8 @@ function App() {
         try {
             const loaded = await OpenQuiz() as Quiz | null;
             if (loaded) await startQuiz(loaded);
-        } catch (error_) {
-            setError(error_ instanceof Error ? error_.message : String(error_));
+        } catch (error) {
+            setError(error instanceof Error ? error.message : String(error));
         } finally {
             setIsOpening(false);
         }
@@ -137,8 +138,8 @@ function App() {
         try {
             const loaded = await OpenRecentQuiz(path) as Quiz;
             await startQuiz(loaded);
-        } catch (error_) {
-            setError(error_ instanceof Error ? error_.message : String(error_));
+        } catch (error) {
+            setError(error instanceof Error ? error.message : String(error));
         } finally {
             setIsOpening(false);
         }
@@ -170,10 +171,10 @@ function App() {
             setAnswers({});
             const recentEntry = { name: quizToStart.name, path: quizToStart.path, lastRun: Date.now() };
             setRecentQuizzes((current) => [recentEntry, ...current.filter((item) => item.path !== recentEntry.path)].slice(0, maxRecentQuizzes));
-        } catch (error_) {
+        } catch (error) {
             if (photoSearchRun.current !== searchRun) return;
-            setError(error_ instanceof Error ? error_.message : String(error_));
-            setPhotoResult({ photos: {}, warnings: [error_ instanceof Error ? error_.message : String(error_)] });
+            setError(error instanceof Error ? error.message : String(error));
+            setPhotoResult({ photos: {}, warnings: [error instanceof Error ? error.message : String(error)] });
         } finally {
             if (photoSearchRun.current === searchRun) {
                 setIsFindingPhotos(false);
@@ -205,7 +206,9 @@ function App() {
         <div className="app-shell">
             <header className="topbar">
                 <div className="brand-lockup">
-                    <span className="brand-mark" aria-hidden="true">P</span>
+                    <span className="brand-mark">
+                        <img src={grackleAvatar} alt="Grackle" />
+                    </span>
                     <span className="brand-name">PHOTO ID</span>
                 </div>
                 <span className="topbar-label">FIELD QUIZ</span>
