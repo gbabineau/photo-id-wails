@@ -42,6 +42,7 @@ export namespace main {
 	}
 	export class Quiz {
 	    name: string;
+	    path: string;
 	    start_month: number;
 	    end_month: number;
 	    location: string;
@@ -56,6 +57,7 @@ export namespace main {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
+	        this.path = source["path"];
 	        this.start_month = source["start_month"];
 	        this.end_month = source["end_month"];
 	        this.location = source["location"];

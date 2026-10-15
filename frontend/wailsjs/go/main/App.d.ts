@@ -7,3 +7,5 @@ export function GetPhotoDataURL(arg1:string):Promise<string>;
 export function LoadQuizPhotos(arg1:main.Quiz):Promise<main.PhotoResult>;
 
 export function OpenQuiz():Promise<main.Quiz>;
+
+export function OpenRecentQuiz(arg1:string):Promise<main.Quiz>;

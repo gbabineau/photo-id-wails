@@ -13,3 +13,7 @@ export function LoadQuizPhotos(arg1) {
 export function OpenQuiz() {
   return window['go']['main']['App']['OpenQuiz']();
 }
+
+export function OpenRecentQuiz(arg1) {
+  return window['go']['main']['App']['OpenRecentQuiz'](arg1);
+}

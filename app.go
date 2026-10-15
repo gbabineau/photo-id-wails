@@ -18,6 +18,7 @@ type App struct {
 
 type Quiz struct {
 	Name            string    `json:"name"`
+	Path            string    `json:"path"`
 	StartMonth      int       `json:"start_month"`
 	EndMonth        int       `json:"end_month"`
 	Location        string    `json:"location"`
@@ -60,12 +61,23 @@ func (a *App) OpenQuiz() (*Quiz, error) {
 	if path == "" {
 		return nil, nil
 	}
+	return a.openQuizPath(path)
+}
 
+func (a *App) OpenRecentQuiz(path string) (*Quiz, error) {
+	if strings.TrimSpace(path) == "" {
+		return nil, fmt.Errorf("quiz path is empty")
+	}
+	return a.openQuizPath(path)
+}
+
+func (a *App) openQuizPath(path string) (*Quiz, error) {
 	quiz, err := loadQuiz(path)
 	if err != nil {
 		return nil, err
 	}
 	quiz.Name = quizNameFromPath(path)
+	quiz.Path = path
 	annotateQuizHaveList(quiz, a.haveList)
 
 	taxonomy, err := loadTaxonomy(a.ctx)

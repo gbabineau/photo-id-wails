@@ -7,7 +7,7 @@ This is the Go/Wails workspace for a standalone desktop rewrite of the Python/Tk
 - Go
 - Node.js and npm
 - The Wails v2 CLI: `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
-- The platform-specific Wails build requirements: https://wails.io/docs/gettingstarted/installation
+- The platform-specific Wails build requirements: [https://wails.io/docs/gettingstarted/installation]
 
 ## Development
 
@@ -25,7 +25,7 @@ Photo lookup uses Playwright for Go to load eBird's media catalog in Chromium an
 
 ## Build
 
-Run `wails build` from the project root to build the desktop application for the current platform. Build each release on its target platform with that platform's Wails prerequisites installed.
+Run `./build.ps1` in PowerShell to build the desktop application and run the Go unit tests. In VS Code, select **Terminal > Run Build Task** or press `Ctrl+Shift+B`, then choose **Build and test Photo ID**. The executable is written to `build/bin/photo-id.exe` on Windows. Build each release on its target platform with that platform's Wails prerequisites installed.
 
 ## GitHub Actions
 
