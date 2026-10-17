@@ -30,6 +30,7 @@ type RecentQuiz = {
     name: string;
     path: string;
     lastRun: number;
+    location?: string;
 };
 
 type PhotoResult = {
@@ -50,6 +51,25 @@ const months = [
 ];
 
 const recentQuizStorageKey = 'photo-id.recent-quizzes.v1';
+const tripStorageKey = 'photo-id.next-trip.v1';
+
+type Trip = { place: string; date: string };
+
+function readTrip(): Trip | null {
+    try {
+        const trip = JSON.parse(window.localStorage.getItem(tripStorageKey) || 'null') as Partial<Trip> | null;
+        return trip && typeof trip.place === 'string' && typeof trip.date === 'string' ? { place: trip.place, date: trip.date } : null;
+    } catch {
+        return null;
+    }
+}
+
+function daysUntil(date: string): number {
+    const [year, month, day] = date.split('-').map(Number);
+    const today = new Date();
+    const todayUTC = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+    return Math.round((Date.UTC(year, month - 1, day) - todayUTC) / 86400000);
+}
 const maxRecentQuizzes = 10;
 
 function readRecentQuizzes(): RecentQuiz[] {
@@ -70,7 +90,7 @@ function readRecentQuizzes(): RecentQuiz[] {
 }
 
 function formatRecentDate(timestamp: number): string {
-    return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(timestamp);
+    return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(timestamp);
 }
 
 function App() {
@@ -87,6 +107,9 @@ function App() {
     const [photoLoadErrors, setPhotoLoadErrors] = useState<Record<string, string>>({});
     const [recentQuizzes, setRecentQuizzes] = useState<RecentQuiz[]>(readRecentQuizzes);
     const requestedPhotoURLs = useRef(new Set<string>());
+    const [trip, setTrip] = useState<Trip | null>(readTrip);
+    const [tripDraft, setTripDraft] = useState<Trip>({ place: '', date: '' });
+    const tripDialog = useRef<HTMLDialogElement>(null);
     const photoSearchRun = useRef(0);
 
     useEffect(() => EventsOn('photo-search-progress', (progress: PhotoProgress) => {
@@ -169,7 +192,7 @@ function App() {
             setPhotoResult(result);
             setImageIndexes({});
             setAnswers({});
-            const recentEntry = { name: quizToStart.name, path: quizToStart.path, lastRun: Date.now() };
+            const recentEntry = { name: quizToStart.name, path: quizToStart.path, lastRun: Date.now(), location: quizToStart.location };
             setRecentQuizzes((current) => [recentEntry, ...current.filter((item) => item.path !== recentEntry.path)].slice(0, maxRecentQuizzes));
         } catch (error_) {
             if (photoSearchRun.current !== searchRun) return;
@@ -182,6 +205,27 @@ function App() {
             }
         }
     }
+
+    function openTripDialog() {
+        setTripDraft(trip ?? { place: '', date: '' });
+        tripDialog.current?.showModal();
+    }
+
+    function saveTrip(event: React.FormEvent) {
+        event.preventDefault();
+        const next = { place: tripDraft.place.trim(), date: tripDraft.date };
+        const value = next.place && next.date ? next : null;
+        setTrip(value);
+        try {
+            if (value) window.localStorage.setItem(tripStorageKey, JSON.stringify(value));
+            else window.localStorage.removeItem(tripStorageKey);
+        } catch {
+            // Storage unavailable; the trip lasts for this session only.
+        }
+        tripDialog.current?.close();
+    }
+
+    const tripDays = trip ? daysUntil(trip.date) : null;
 
     function endQuiz() {
         photoSearchRun.current += 1;
@@ -215,7 +259,7 @@ function App() {
                 {quiz && <button className="open-button" onClick={endQuiz}>End Quiz</button>}
             </header>
 
-            <main className="main-content">
+            <main className={quiz && isPlaying && photoResult ? 'main-content main-content-wide' : 'main-content'}>
                 {error && <div className="error-message" role="alert">{error}</div>}
                 {!quiz ? (
                     <section className="empty-state">
@@ -237,6 +281,7 @@ function App() {
                                             {recentQuizzes.map((recent) => (
                                                 <li key={recent.path}>
                                                     <button className="recent-quiz-button" onClick={() => openRecentQuiz(recent.path)} disabled={isOpening || isFindingPhotos}>
+                                                        <span className="recent-quiz-region">{recent.location || ''}</span>
                                                         <strong>{recent.name}</strong>
                                                         <time dateTime={new Date(recent.lastRun).toISOString()}>{formatRecentDate(recent.lastRun)}</time>
                                                     </button>
@@ -246,9 +291,19 @@ function App() {
                                     </section>
                                 )}
                             </div>
-                            <div className="field-stamp" aria-hidden="true">
-                                <span>OBSERVATION</span><strong>01</strong><span>SPECIES SET</span>
-                            </div>
+                            <button className="field-stamp" onClick={openTripDialog} aria-label={trip ? `Next trip: ${trip.place}. Click to edit.` : 'Set next trip'}>
+                                {trip && tripDays !== null ? (
+                                    tripDays > 0 ? (
+                                        <><span>COUNTDOWN</span><strong>{tripDays}</strong><span>{tripDays === 1 ? 'DAY' : 'DAYS'} UNTIL {trip.place.toUpperCase()}</span></>
+                                    ) : tripDays === 0 ? (
+                                        <><span>TODAY</span><strong>Go!</strong><span>{trip.place.toUpperCase()}</span></>
+                                    ) : (
+                                        <><span>TRIP PASSED</span><strong>{trip.place}</strong><span>SET NEW TRIP</span></>
+                                    )
+                                ) : (
+                                    <><span>NEXT TRIP</span><strong>?</strong><span>CLICK TO SET</span></>
+                                )}
+                            </button>
                         </div>
                     </section>
                 ) : isPlaying && photoResult ? (
@@ -257,7 +312,7 @@ function App() {
                         <section className="quiz-heading">
                             <div>
                                 <p className="section-label">REGION {quiz.location || 'NOT SET'} · {period.toUpperCase()}</p>
-                                <h1>Identify the species</h1>
+                                <h1>Quiz: {quiz.name || 'Untitled quiz'}</h1>
                             </div>
                             <div className="game-actions">
                                 <span className="score-tag">
@@ -267,6 +322,9 @@ function App() {
                             </div>
                         </section>
                         {quiz.notes && <p className="quiz-notes game-notes">{quiz.notes}</p>}
+                        {isFindingPhotos && (
+                            <div className="media-notice" role="status">{photoProgress || 'Finding photos...'}</div>
+                        )}
                         {photoWarnings.length > 0 && (
                             <div className="media-notice">{photoWarnings.join(' · ')}</div>
                         )}
@@ -331,10 +389,10 @@ function App() {
                         <div className="eyebrow">FIELD LIBRARY <span>/</span> QUIZ PREVIEW</div>
                         <section className="quiz-heading">
                             <div>
-                                <p className="section-label">REGION {quiz.location || 'NOT SET'}</p>
+                                <p className="section-label">REGION {quiz.location || 'NOT SET'} · {period.toUpperCase()}</p>
                                 <h1>Quiz details for {quiz.name || 'Untitled quiz'}</h1>
                             </div>
-                            <button className="primary-button" onClick={() => startQuiz(quiz)} disabled={isFindingPhotos}>
+                            <button className="primary-button" onClick={() => (photoResult && !isFindingPhotos ? setIsPlaying(true) : startQuiz(quiz))} disabled={isFindingPhotos}>
                                 {isFindingPhotos ? (photoProgress || 'Finding photos...') : 'Return to Quiz'}
                             </button>
                         </section>
@@ -384,6 +442,18 @@ function App() {
                     </>
                 )}
             </main>
+            <dialog ref={tripDialog} className="trip-dialog" aria-labelledby="trip-dialog-title">
+                <form onSubmit={saveTrip}>
+                    <h2 id="trip-dialog-title">Next trip</h2>
+                    <label>Where<input type="text" value={tripDraft.place} onChange={(event) => setTripDraft((current) => ({ ...current, place: event.target.value }))} placeholder="Argentina" required /></label>
+                    <label>When<input type="date" value={tripDraft.date} onChange={(event) => setTripDraft((current) => ({ ...current, date: event.target.value }))} required /></label>
+                    <div className="trip-dialog-actions">
+                        <button type="button" className="secondary-button" onClick={() => { setTrip(null); try { window.localStorage.removeItem(tripStorageKey); } catch { /* ignore */ } tripDialog.current?.close(); }}>Clear</button>
+                        <button type="button" className="secondary-button" onClick={() => tripDialog.current?.close()}>Cancel</button>
+                        <button type="submit" className="primary-button">Save</button>
+                    </div>
+                </form>
+            </dialog>
         </div>
     );
 }
