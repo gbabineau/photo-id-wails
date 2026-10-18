@@ -120,6 +120,7 @@ function App() {
     const [photoResult, setPhotoResult] = useState<PhotoResult | null>(null);
     const [imageIndexes, setImageIndexes] = useState<Record<string, number>>({});
     const [answers, setAnswers] = useState<Record<string, string>>({});
+    const [fitWindow, setFitWindow] = useState<Record<string, boolean>>({});
     const [error, setError] = useState('');
     const [isOpening, setIsOpening] = useState(false);
     const [isFindingPhotos, setIsFindingPhotos] = useState(false);
@@ -453,9 +454,10 @@ function App() {
                                 const isCorrect = answer === species.comName;
                                 const firstChoice = Math.max(0, Math.min(index - 3, quiz.species.length - 7));
                                 const choices = quiz.species.slice(firstChoice, firstChoice + 7);
+                                const isFitWindow = !!fitWindow[speciesKey];
 
                                 return (
-                                    <article className="game-card" key={speciesKey}>
+                                    <article className={isFitWindow ? 'game-card game-card-fit-window' : 'game-card'} key={speciesKey}>
                                         <div className="photo-frame">
                                             {photoDataURL ? (
                                                 <img src={photoDataURL} alt="Bird to identify" />
@@ -465,6 +467,11 @@ function App() {
                                                 <div className="photo-placeholder">No photo available</div>
                                             )}
                                         </div>
+                                        {photoDataURL && (
+                                            <button className="fit-toggle" aria-pressed={isFitWindow} onClick={() => setFitWindow((current) => ({ ...current, [speciesKey]: !isFitWindow }))}>
+                                                {isFitWindow ? 'Fit to width' : 'Full Size'}
+                                            </button>
+                                        )}
                                         <div className="photo-controls">
                                             <button aria-label="Previous photo" disabled={images.length < 2} onClick={() => setImageIndexes((current) => ({ ...current, [speciesKey]: (imageIndex + images.length - 1) % images.length }))}>Previous</button>
                                             <span>{images.length > 0 ? `${imageIndex + 1} / ${images.length}` : 'NO IMAGES'}</span>

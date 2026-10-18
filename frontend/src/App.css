@@ -84,9 +84,13 @@ h1 { margin-bottom: 12px; color: #1d342c; font-family: Georgia, 'Times New Roman
 .secondary-button:hover { background: #e4eae1; }
 .game-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 18px; margin-top: 26px; }
 .game-card { min-width: 0; padding: 10px; border: 1px solid #cdd6cb; background: #fbfcf8; }
-.photo-frame { display: grid; width: 100%; aspect-ratio: 4 / 3; place-items: center; overflow: hidden; background: #e2e7df; }
-.photo-frame img { width: 100%; height: 100%; object-fit: contain; }
+.photo-frame { position: relative; display: grid; width: 100%; aspect-ratio: 4 / 3; place-items: center; overflow: hidden; background: #e2e7df; }
+.photo-frame img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .photo-placeholder { color: #758276; font-size: 13px; }
+.fit-toggle { display: block; margin: 8px 0 0 auto; min-height: 26px; padding: 0 8px; border: 1px solid #cbd5ca; border-radius: 2px; color: #315344; background: transparent; font: inherit; font-size: 11px; cursor: pointer; }
+.fit-toggle:hover { background: #e8eee5; }
+.game-card-fit-window { grid-column: 1 / -1; }
+.game-card-fit-window .photo-frame { aspect-ratio: auto; height: calc(100vh - 220px); min-height: 300px; }
 .photo-controls { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 42px; color: #758276; font-size: 10px; font-weight: 800; letter-spacing: 0.7px; }
 .photo-controls button { min-height: 30px; padding: 0 8px; border: 1px solid #cbd5ca; border-radius: 2px; color: #315344; background: transparent; font: inherit; font-size: 11px; cursor: pointer; }
 .photo-controls button:hover:not(:disabled) { background: #e8eee5; }
