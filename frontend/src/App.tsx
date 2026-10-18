@@ -51,17 +51,39 @@ const months = [
 ];
 
 const recentQuizStorageKey = 'photo-id.recent-quizzes.v1';
-const tripStorageKey = 'photo-id.next-trip.v1';
+const tripsStorageKey = 'photo-id.trips.v1';
+const legacyTripStorageKey = 'photo-id.next-trip.v1';
 
-type Trip = { place: string; date: string };
+type Trip = { id: string; place: string; date: string };
 
-function readTrip(): Trip | null {
+function newTripId(): string {
+    return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function isTripFields(item: unknown): item is { place: string; date: string } {
+    if (typeof item !== 'object' || item === null) return false;
+    const trip = item as Partial<Trip>;
+    return typeof trip.place === 'string' && typeof trip.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(trip.date);
+}
+
+function readTrips(): Trip[] {
     try {
-        const trip = JSON.parse(window.localStorage.getItem(tripStorageKey) || 'null') as Partial<Trip> | null;
-        return trip && typeof trip.place === 'string' && typeof trip.date === 'string' ? { place: trip.place, date: trip.date } : null;
+        const stored = window.localStorage.getItem(tripsStorageKey);
+        if (stored !== null) {
+            const parsed: unknown = JSON.parse(stored);
+            if (!Array.isArray(parsed)) return [];
+            return parsed.filter(isTripFields).map((trip) => ({ id: (trip as Partial<Trip>).id || newTripId(), place: trip.place, date: trip.date }));
+        }
+        const legacy: unknown = JSON.parse(window.localStorage.getItem(legacyTripStorageKey) || 'null');
+        return isTripFields(legacy) ? [{ id: newTripId(), place: legacy.place, date: legacy.date }] : [];
     } catch {
-        return null;
+        return [];
     }
+}
+
+function formatTripDate(date: string): string {
+    const [year, month, day] = date.split('-').map(Number);
+    return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(year, month - 1, day));
 }
 
 function daysUntil(date: string): number {
@@ -107,12 +129,27 @@ function App() {
     const [photoLoadErrors, setPhotoLoadErrors] = useState<Record<string, string>>({});
     const [recentQuizzes, setRecentQuizzes] = useState<RecentQuiz[]>(readRecentQuizzes);
     const requestedPhotoURLs = useRef(new Set<string>());
-    const [trip, setTrip] = useState<Trip | null>(readTrip);
-    const [tripDraft, setTripDraft] = useState<Trip>({ place: '', date: '' });
+    const [trips, setTrips] = useState<Trip[]>(readTrips);
+    const [selectedTripId, setSelectedTripId] = useState('');
+    const [editingTripId, setEditingTripId] = useState('');
+    const [tripDraft, setTripDraft] = useState({ place: '', date: '' });
     const tripDialog = useRef<HTMLDialogElement>(null);
     const [destinationImages, setDestinationImages] = useState<main.DestinationImage[]>([]);
     const [destinationIndex, setDestinationIndex] = useState(0);
+    const [destinationStatus, setDestinationStatus] = useState('');
+    const sortedTrips = [...trips].sort((a, b) => a.date.localeCompare(b.date));
+    const upcomingTrips = sortedTrips.filter((item) => daysUntil(item.date) >= 0);
+    const trip = upcomingTrips.find((item) => item.id === selectedTripId) ?? upcomingTrips[0] ?? null;
+    const otherTrips = upcomingTrips.filter((item) => item.id !== trip?.id);
     const tripPlace = trip?.place;
+
+    useEffect(() => {
+        try {
+            window.localStorage.setItem(tripsStorageKey, JSON.stringify(trips));
+        } catch {
+            // Storage unavailable; trips last for this session only.
+        }
+    }, [trips]);
 
     function openDestinationArticle(pageUrl?: string) {
         if (pageUrl?.startsWith('https://en.wikipedia.org/wiki/')) BrowserOpenURL(pageUrl);
@@ -121,11 +158,19 @@ function App() {
     useEffect(() => {
         setDestinationImages([]);
         setDestinationIndex(0);
+        setDestinationStatus('');
         if (!tripPlace) return;
         let cancelled = false;
+        setDestinationStatus('Finding photos...');
         GetDestinationImages(tripPlace)
-            .then((images) => { if (!cancelled) setDestinationImages(images ?? []); })
-            .catch(() => undefined);
+            .then((images) => {
+                if (cancelled) return;
+                setDestinationImages(images ?? []);
+                setDestinationStatus(images?.length ? '' : `No Wikipedia photos found for "${tripPlace}". Check the spelling or try a more specific name.`);
+            })
+            .catch((error_) => {
+                if (!cancelled) setDestinationStatus(`Photos unavailable: ${error_ instanceof Error ? error_.message : String(error_)}`);
+            });
         return () => { cancelled = true; };
     }, [tripPlace]);
 
@@ -231,22 +276,35 @@ function App() {
     }
 
     function openTripDialog() {
-        setTripDraft(trip ?? { place: '', date: '' });
+        resetTripForm();
         tripDialog.current?.showModal();
+    }
+
+    function resetTripForm() {
+        setEditingTripId('');
+        setTripDraft({ place: '', date: '' });
+    }
+
+    function editTrip(item: Trip) {
+        setEditingTripId(item.id);
+        setTripDraft({ place: item.place, date: item.date });
+    }
+
+    function deleteTrip(id: string) {
+        setTrips((current) => current.filter((item) => item.id !== id));
+        if (editingTripId === id) resetTripForm();
     }
 
     function saveTrip(event: React.FormEvent) {
         event.preventDefault();
-        const next = { place: tripDraft.place.trim(), date: tripDraft.date };
-        const value = next.place && next.date ? next : null;
-        setTrip(value);
-        try {
-            if (value) window.localStorage.setItem(tripStorageKey, JSON.stringify(value));
-            else window.localStorage.removeItem(tripStorageKey);
-        } catch {
-            // Storage unavailable; the trip lasts for this session only.
+        const place = tripDraft.place.trim();
+        if (!place || !tripDraft.date) return;
+        if (editingTripId) {
+            setTrips((current) => current.map((item) => (item.id === editingTripId ? { ...item, place, date: tripDraft.date } : item)));
+        } else {
+            setTrips((current) => [...current, { id: newTripId(), place, date: tripDraft.date }]);
         }
-        tripDialog.current?.close();
+        resetTripForm();
     }
 
     const tripDays = trip ? daysUntil(trip.date) : null;
@@ -316,19 +374,34 @@ function App() {
                                 )}
                             </div>
                             <div className="trip-panel">
-                            <button className="field-stamp" onClick={openTripDialog} aria-label={trip ? `Next trip: ${trip.place}. Click to edit.` : 'Set next trip'}>
+                            <button className="field-stamp" onClick={openTripDialog} aria-label={trip ? `Next trip: ${trip.place}. Click to manage trips.` : 'Add a trip'}>
                                 {trip && tripDays !== null ? (
                                     tripDays > 0 ? (
                                         <><span>COUNTDOWN</span><strong>{tripDays}</strong><span>{tripDays === 1 ? 'DAY' : 'DAYS'} UNTIL {trip.place.toUpperCase()}</span></>
-                                    ) : tripDays === 0 ? (
-                                        <><span>TODAY</span><strong>Go!</strong><span>{trip.place.toUpperCase()}</span></>
                                     ) : (
-                                        <><span>TRIP PASSED</span><strong>{trip.place}</strong><span>SET NEW TRIP</span></>
+                                        <><span>TODAY</span><strong>Go!</strong><span>{trip.place.toUpperCase()}</span></>
                                     )
                                 ) : (
                                     <><span>NEXT TRIP</span><strong>?</strong><span>CLICK TO SET</span></>
                                 )}
                             </button>
+                            {otherTrips.length > 0 && (
+                                <section className="other-trips" aria-label="Other upcoming trips">
+                                    <p className="section-label">ALSO COMING UP</p>
+                                    <ul>
+                                        {otherTrips.map((item) => (
+                                            <li key={item.id}>
+                                                <button onClick={() => setSelectedTripId(item.id)} title="Show this trip">
+                                                    <span>{item.place}</span>
+                                                    <span>{formatTripDate(item.date)}</span>
+                                                    <span>{daysUntil(item.date)} {daysUntil(item.date) === 1 ? 'day' : 'days'}</span>
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </section>
+                            )}
+                            {destinationStatus && <p className="destination-status" role="status">{destinationStatus}</p>}
                             {destinationImages.length > 0 && (
                                 <figure className="destination-figure">
                                     <button
@@ -485,13 +558,26 @@ function App() {
             </main>
             <dialog ref={tripDialog} className="trip-dialog" aria-labelledby="trip-dialog-title">
                 <form onSubmit={saveTrip}>
-                    <h2 id="trip-dialog-title">Next trip</h2>
+                    <h2 id="trip-dialog-title">Trips</h2>
+                    {sortedTrips.length > 0 && (
+                        <ul className="trip-manage-list">
+                            {sortedTrips.map((item) => (
+                                <li key={item.id}>
+                                    <span>{item.place}</span>
+                                    <span>{formatTripDate(item.date)}{daysUntil(item.date) < 0 ? ' (passed)' : ''}</span>
+                                    <button type="button" className="secondary-button" onClick={() => editTrip(item)}>Edit</button>
+                                    <button type="button" className="secondary-button" onClick={() => deleteTrip(item.id)}>Delete</button>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                    <p className="section-label">{editingTripId ? 'EDIT TRIP' : 'ADD A TRIP'}</p>
                     <label>Where<input type="text" value={tripDraft.place} onChange={(event) => setTripDraft((current) => ({ ...current, place: event.target.value }))} placeholder="Argentina" required /></label>
                     <label>When<input type="date" value={tripDraft.date} onChange={(event) => setTripDraft((current) => ({ ...current, date: event.target.value }))} required /></label>
                     <div className="trip-dialog-actions">
-                        <button type="button" className="secondary-button" onClick={() => { setTrip(null); try { window.localStorage.removeItem(tripStorageKey); } catch { /* ignore */ } tripDialog.current?.close(); }}>Clear</button>
-                        <button type="button" className="secondary-button" onClick={() => tripDialog.current?.close()}>Cancel</button>
-                        <button type="submit" className="primary-button">Save</button>
+                        {editingTripId && <button type="button" className="secondary-button" onClick={resetTripForm}>Cancel edit</button>}
+                        <button type="submit" className="primary-button">{editingTripId ? 'Save' : 'Add trip'}</button>
+                        <button type="button" className="secondary-button" onClick={() => tripDialog.current?.close()}>Done</button>
                     </div>
                 </form>
             </dialog>

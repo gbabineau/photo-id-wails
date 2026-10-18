@@ -101,10 +101,17 @@ func getDestinationImages(place string) ([]DestinationImage, error) {
 		return nil, err
 	}
 	var images []DestinationImage
+	var lastErr error
 	for _, ref := range refs {
-		if dataURL, err := downloadDestinationImage(ref.ThumbURL); err == nil {
-			images = append(images, DestinationImage{DataURL: dataURL, Caption: ref.Caption, PageURL: ref.PageURL})
+		dataURL, err := downloadDestinationImage(ref.ThumbURL)
+		if err != nil {
+			lastErr = err
+			continue
 		}
+		images = append(images, DestinationImage{DataURL: dataURL, Caption: ref.Caption, PageURL: ref.PageURL})
+	}
+	if len(images) == 0 && lastErr != nil {
+		return nil, fmt.Errorf("download destination images: %w", lastErr)
 	}
 	return images, nil
 }
