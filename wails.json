@@ -9,5 +9,11 @@
   "author": {
     "name": "gbabineau",
     "email": "guy.babineau@gmail.com"
+  },
+  "info": {
+    "companyName": "MyCompany",
+    "productName": "photo-id",
+    "productVersion": "0.2.0",
+    "copyright": "Copyright Guy Babineau"
   }
 }

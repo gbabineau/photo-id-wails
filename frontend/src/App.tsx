@@ -579,7 +579,7 @@ function App() {
                         </ul>
                     )}
                     <p className="section-label">{editingTripId ? 'EDIT TRIP' : 'ADD A TRIP'}</p>
-                    <label>Where<input type="text" value={tripDraft.place} onChange={(event) => setTripDraft((current) => ({ ...current, place: event.target.value }))} placeholder="Argentina" required /></label>
+                    <label>Where<input type="text" value={tripDraft.place} onChange={(event) => setTripDraft((current) => ({ ...current, place: event.target.value }))} placeholder="Country, State, or NWR" required /></label>
                     <label>When<input type="date" value={tripDraft.date} onChange={(event) => setTripDraft((current) => ({ ...current, date: event.target.value }))} required /></label>
                     <div className="trip-dialog-actions">
                         {editingTripId && <button type="button" className="secondary-button" onClick={resetTripForm}>Cancel edit</button>}
