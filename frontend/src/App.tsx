@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { GetPhotoDataURL, LoadQuizPhotos, OpenQuiz, OpenRecentQuiz } from '../wailsjs/go/main/App';
+import { GetDestinationImages, GetPhotoDataURL, LoadQuizPhotos, OpenQuiz, OpenRecentQuiz } from '../wailsjs/go/main/App';
 import { main } from '../wailsjs/go/models';
-import { EventsOn } from '../wailsjs/runtime/runtime';
+import { BrowserOpenURL, EventsOn } from '../wailsjs/runtime/runtime';
 import grackleAvatar from './assets/images/grackle-avatar.jpg';
 import './App.css';
 
@@ -110,6 +110,30 @@ function App() {
     const [trip, setTrip] = useState<Trip | null>(readTrip);
     const [tripDraft, setTripDraft] = useState<Trip>({ place: '', date: '' });
     const tripDialog = useRef<HTMLDialogElement>(null);
+    const [destinationImages, setDestinationImages] = useState<main.DestinationImage[]>([]);
+    const [destinationIndex, setDestinationIndex] = useState(0);
+    const tripPlace = trip?.place;
+
+    function openDestinationArticle(pageUrl?: string) {
+        if (pageUrl?.startsWith('https://en.wikipedia.org/wiki/')) BrowserOpenURL(pageUrl);
+    }
+
+    useEffect(() => {
+        setDestinationImages([]);
+        setDestinationIndex(0);
+        if (!tripPlace) return;
+        let cancelled = false;
+        GetDestinationImages(tripPlace)
+            .then((images) => { if (!cancelled) setDestinationImages(images ?? []); })
+            .catch(() => undefined);
+        return () => { cancelled = true; };
+    }, [tripPlace]);
+
+    useEffect(() => {
+        if (destinationImages.length < 2) return;
+        const timer = window.setInterval(() => setDestinationIndex((current) => (current + 1) % destinationImages.length), 6000);
+        return () => window.clearInterval(timer);
+    }, [destinationImages]);
     const photoSearchRun = useRef(0);
 
     useEffect(() => EventsOn('photo-search-progress', (progress: PhotoProgress) => {
@@ -291,6 +315,7 @@ function App() {
                                     </section>
                                 )}
                             </div>
+                            <div className="trip-panel">
                             <button className="field-stamp" onClick={openTripDialog} aria-label={trip ? `Next trip: ${trip.place}. Click to edit.` : 'Set next trip'}>
                                 {trip && tripDays !== null ? (
                                     tripDays > 0 ? (
@@ -304,6 +329,22 @@ function App() {
                                     <><span>NEXT TRIP</span><strong>?</strong><span>CLICK TO SET</span></>
                                 )}
                             </button>
+                            {destinationImages.length > 0 && (
+                                <figure className="destination-figure">
+                                    <button
+                                        className="destination-gallery"
+                                        onClick={() => openDestinationArticle(destinationImages[destinationIndex]?.pageUrl)}
+                                        aria-label={`Open the Wikipedia article for ${tripPlace}`}
+                                        title="Open on Wikipedia"
+                                    >
+                                        {destinationImages.map((image, index) => (
+                                            <img key={image.dataUrl.slice(-64)} src={image.dataUrl} alt={image.caption} className={index === destinationIndex ? 'active' : ''} />
+                                        ))}
+                                    </button>
+                                    <figcaption>{destinationImages[destinationIndex]?.caption}</figcaption>
+                                </figure>
+                            )}
+                            </div>
                         </div>
                     </section>
                 ) : isPlaying && photoResult ? (

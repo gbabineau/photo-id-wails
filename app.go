@@ -121,6 +121,10 @@ func (a *App) GetPhotoDataURL(photoURL string) (string, error) {
 	return getPhotoDataURL(photoURL)
 }
 
+func (a *App) GetDestinationImages(place string) ([]DestinationImage, error) {
+	return getDestinationImages(place)
+}
+
 func loadQuiz(path string) (*Quiz, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {

@@ -1,5 +1,21 @@
 export namespace main {
 	
+	export class DestinationImage {
+	    dataUrl: string;
+	    caption: string;
+	    pageUrl: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DestinationImage(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.dataUrl = source["dataUrl"];
+	        this.caption = source["caption"];
+	        this.pageUrl = source["pageUrl"];
+	    }
+	}
 	export class PhotoResult {
 	    photos: Record<string, Array<string>>;
 	    warnings: string[];
