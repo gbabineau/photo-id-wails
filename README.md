@@ -36,3 +36,18 @@ SonarQube Cloud analysis is configured in `sonar-project.properties`. Create or 
 For a local `act` experiment, put a token you already have in the ignored root file `sonar.local.env` as `SONAR_TOKEN=...`, then pass it with `act --secret-file sonar.local.env`. Do not paste the token into chat or commit that file. `act` needs Docker and cannot faithfully reproduce this workflow's `windows-latest` job; use GitHub Actions for the end-to-end test. GitHub does not reveal a secret's saved value, so generate a new SonarQube token if you no longer have it.
 
 To block merges when checks fail, add a branch protection rule or ruleset for `main` in GitHub and require the `Build and test` and `SonarQube` checks. Configure the Sonar token before making the SonarQube check a required status.
+
+## Packaging
+
+There is a powershell file to package the app in `.\package.ps1`
+
+To use it, install NSIS (`winget install NSIS.NSIS`) and make sure `makensis` is on the PATH.
+
+Then
+
+```powershell
+run wails build -clean -nsis
+```
+
+This produces `build/bin/photo-id-amd64-installer.exe`. It installs the app, adds Start Menu and desktop shortcuts, and registers an uninstaller. It also installs the WebView2 runtime if the machine lacks it, which is rare on current Windows.
+

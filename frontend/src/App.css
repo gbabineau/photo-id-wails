@@ -11,17 +11,43 @@
 .open-button:hover, .primary-button:hover { background: #e2ed9b; }
 .open-button:disabled, .primary-button:disabled { cursor: progress; opacity: 0.7; }
 .main-content { width: min(1040px, 89vw); margin: 0 auto; padding: 48px 0 72px; }
+.field-stamp { background: transparent; font: inherit; cursor: pointer; }
+.field-stamp:hover { background: #e4eae1; }
+.field-stamp span { max-width: 180px; text-align: center; }
+.field-stamp strong { max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trip-dialog { padding: 24px; border: 1px solid #bdc9ba; border-radius: 4px; background: #f8f8f1; color: #183f35; }
+.trip-dialog form { display: flex; flex-direction: column; gap: 14px; min-width: 280px; }
+.trip-dialog h2 { margin: 0; font-size: 18px; }
+.trip-panel { display: flex; flex-direction: column; align-items: center; gap: 28px; }
+.other-trips { width: 320px; max-width: 100%; }
+.other-trips ul, .trip-manage-list { margin: 0; padding: 0; list-style: none; }
+.other-trips button { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; width: 100%; padding: 8px 4px; border: 0; border-bottom: 1px solid #cdd6cb; background: transparent; color: #315344; font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.other-trips button:hover { background: #e4eae1; }
+.trip-manage-list li { display: grid; grid-template-columns: 1fr auto auto auto; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #cdd6cb; font-size: 13px; }
+.destination-status { max-width: 320px; margin: 0; color: #547467; font-size: 12px; text-align: center; }
+.destination-figure { display: flex; flex-direction: column; gap: 8px; width: 320px; max-width: 100%; margin: 0; }
+.destination-figure figcaption { min-height: 3.6em; color: #547467; font-size: 12px; line-height: 1.4; text-align: center; }
+.destination-gallery { position: relative; display: block; padding: 0; cursor: pointer; flex: 0 0 auto; width: 100%; max-width: 100%; aspect-ratio: 4 / 3; overflow: hidden; border: 1px solid #bdc9ba; border-radius: 4px; background: #dfe7dc; }
+.destination-gallery img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1.2s ease; }
+.destination-gallery img.active { opacity: 1; }
+.trip-dialog label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 700; }
+.trip-dialog input { min-height: 36px; padding: 0 8px; border: 1px solid #b9c8bb; border-radius: 3px; font: inherit; }
+.trip-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.main-content-wide { width: 94vw; }
+.recent-quiz-list { display: grid; grid-template-columns: repeat(3, auto); justify-content: start; column-gap: 24px; margin: 0; padding: 0; list-style: none; }
+.recent-quiz-list > li { display: grid; grid-template-columns: subgrid; grid-column: 1 / -1; }
+.recent-quiz-button { display: grid; grid-template-columns: subgrid; grid-column: 1 / -1; text-align: left; }
 .eyebrow, .section-label { margin: 0; color: #59776a; }
 .eyebrow span { padding: 0 5px; color: #a6b4a8; }
 .empty-state { padding: 28px 0; }
-.empty-layout { display: flex; align-items: center; justify-content: space-between; gap: 36px; min-height: 420px; }
+.empty-layout { display: flex; align-items: center; justify-content: flex-start; gap: 96px; min-height: 420px; }
 h1, h2, p { margin-top: 0; }
 h1 { margin-bottom: 12px; color: #1d342c; font-family: Georgia, 'Times New Roman', serif; font-size: 48px; font-weight: 500; line-height: 1.08; }
 .empty-copy { max-width: 430px; margin-bottom: 24px; color: #62736a; font-size: 15px; line-height: 1.7; }
 .primary-button { color: #f8f8f1; background: #26634d; }
-.field-stamp { display: flex; width: 188px; height: 188px; flex: 0 0 188px; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border: 1px solid #bdc9ba; border-radius: 50%; color: #547467; transform: rotate(8deg); }
+.field-stamp { display: flex; width: 240px; height: 240px; flex: 0 0 240px; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border: 1px solid #bdc9ba; border-radius: 50%; color: #547467; transform: rotate(8deg); }
 .field-stamp span { font-size: 9px; font-weight: 800; letter-spacing: 1.5px; }
-.field-stamp strong { color: #789650; font-family: Georgia, serif; font-size: 64px; font-weight: 400; line-height: 1; }
+.field-stamp strong { color: #789650; font-family: Georgia, serif; font-size: 72px; font-weight: 400; line-height: 1; }
 .error-message { margin-bottom: 22px; padding: 12px 14px; border-left: 3px solid #bd4a36; color: #742f26; background: #fae8e2; font-size: 13px; }
 .quiz-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin: 36px 0 26px; }
 .quiz-heading h1 { margin: 8px 0 0; font-size: 42px; }
@@ -54,13 +80,20 @@ h1 { margin-bottom: 12px; color: #1d342c; font-family: Georgia, 'Times New Roman
 .species-link > span { color: #87968b; font-size: 8px; }
 .game-actions { display: flex; align-items: center; gap: 12px; }
 .score-tag { color: #557163; font-size: 10px; font-weight: 800; letter-spacing: 1px; white-space: nowrap; }
+.photo-size-control { display: flex; align-items: center; gap: 7px; color: #557163; font-size: 11px; white-space: nowrap; }
+.photo-size-control input { width: 100px; accent-color: #26634d; }
+.photo-size-control output { min-width: 4ch; color: #315344; font-variant-numeric: tabular-nums; }
 .secondary-button { min-height: 36px; padding: 0 12px; border: 1px solid #b9c8bb; border-radius: 3px; color: #315344; background: transparent; font: inherit; font-size: 12px; cursor: pointer; }
 .secondary-button:hover { background: #e4eae1; }
 .game-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 18px; margin-top: 26px; }
 .game-card { min-width: 0; padding: 10px; border: 1px solid #cdd6cb; background: #fbfcf8; }
-.photo-frame { display: grid; width: 100%; aspect-ratio: 4 / 3; place-items: center; overflow: hidden; background: #e2e7df; }
-.photo-frame img { width: 100%; height: 100%; object-fit: contain; }
+.photo-frame { position: relative; display: grid; width: 100%; aspect-ratio: 4 / 3; place-items: center; overflow: hidden; background: #e2e7df; }
+.photo-frame img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .photo-placeholder { color: #758276; font-size: 13px; }
+.fit-toggle { display: block; margin: 8px 0 0 auto; min-height: 26px; padding: 0 8px; border: 1px solid #cbd5ca; border-radius: 2px; color: #315344; background: transparent; font: inherit; font-size: 11px; cursor: pointer; }
+.fit-toggle:hover { background: #e8eee5; }
+.game-card-fit-window { grid-column: 1 / -1; }
+.game-card-fit-window .photo-frame { aspect-ratio: auto; height: calc(100vh - 220px); min-height: 300px; }
 .photo-controls { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 42px; color: #758276; font-size: 10px; font-weight: 800; letter-spacing: 0.7px; }
 .photo-controls button { min-height: 30px; padding: 0 8px; border: 1px solid #cbd5ca; border-radius: 2px; color: #315344; background: transparent; font: inherit; font-size: 11px; cursor: pointer; }
 .photo-controls button:hover:not(:disabled) { background: #e8eee5; }
@@ -81,6 +114,7 @@ h1 { margin-bottom: 12px; color: #1d342c; font-family: Georgia, 'Times New Roman
     .main-content { width: calc(100% - 40px); padding-top: 32px; }
     .empty-layout { min-height: 0; padding: 56px 0 24px; }
     .field-stamp { display: none; }
+    .destination-gallery { display: none; }
     h1, .quiz-heading h1 { font-size: 36px; }
     .species-row { grid-template-columns: 32px minmax(0, 1fr) 110px; gap: 10px; padding: 12px 0; }
     .species-details { grid-column: 2; grid-row: 2; }

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { GetPhotoDataURL, LoadQuizPhotos, OpenQuiz, OpenRecentQuiz } from '../wailsjs/go/main/App';
+import { GetDestinationImages, GetPhotoDataURL, LoadQuizPhotos, OpenQuiz, OpenRecentQuiz } from '../wailsjs/go/main/App';
 import { main } from '../wailsjs/go/models';
-import { EventsOn } from '../wailsjs/runtime/runtime';
+import { BrowserOpenURL, EventsOn } from '../wailsjs/runtime/runtime';
 import grackleAvatar from './assets/images/grackle-avatar.jpg';
 import './App.css';
 
@@ -30,6 +30,7 @@ type RecentQuiz = {
     name: string;
     path: string;
     lastRun: number;
+    location?: string;
 };
 
 type PhotoResult = {
@@ -50,6 +51,58 @@ const months = [
 ];
 
 const recentQuizStorageKey = 'photo-id.recent-quizzes.v1';
+const tripsStorageKey = 'photo-id.trips.v1';
+const legacyTripStorageKey = 'photo-id.next-trip.v1';
+const photoCardWidthStorageKey = 'photo-id.photo-card-width.v1';
+const defaultPhotoCardWidth = 400;
+
+function readPhotoCardWidth(): number {
+    try {
+        const width = Number(window.localStorage.getItem(photoCardWidthStorageKey));
+        return Number.isFinite(width) && width >= 300 && width <= 640 ? width : defaultPhotoCardWidth;
+    } catch {
+        return defaultPhotoCardWidth;
+    }
+}
+
+type Trip = { id: string; place: string; date: string };
+
+function newTripId(): string {
+    return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function isTripFields(item: unknown): item is { place: string; date: string } {
+    if (typeof item !== 'object' || item === null) return false;
+    const trip = item as Partial<Trip>;
+    return typeof trip.place === 'string' && typeof trip.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(trip.date);
+}
+
+function readTrips(): Trip[] {
+    try {
+        const stored = window.localStorage.getItem(tripsStorageKey);
+        if (stored !== null) {
+            const parsed: unknown = JSON.parse(stored);
+            if (!Array.isArray(parsed)) return [];
+            return parsed.filter(isTripFields).map((trip) => ({ id: (trip as Partial<Trip>).id || newTripId(), place: trip.place, date: trip.date }));
+        }
+        const legacy: unknown = JSON.parse(window.localStorage.getItem(legacyTripStorageKey) || 'null');
+        return isTripFields(legacy) ? [{ id: newTripId(), place: legacy.place, date: legacy.date }] : [];
+    } catch {
+        return [];
+    }
+}
+
+function formatTripDate(date: string): string {
+    const [year, month, day] = date.split('-').map(Number);
+    return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(year, month - 1, day));
+}
+
+function daysUntil(date: string): number {
+    const [year, month, day] = date.split('-').map(Number);
+    const today = new Date();
+    const todayUTC = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+    return Math.round((Date.UTC(year, month - 1, day) - todayUTC) / 86400000);
+}
 const maxRecentQuizzes = 10;
 
 function readRecentQuizzes(): RecentQuiz[] {
@@ -70,7 +123,7 @@ function readRecentQuizzes(): RecentQuiz[] {
 }
 
 function formatRecentDate(timestamp: number): string {
-    return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(timestamp);
+    return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(timestamp);
 }
 
 function App() {
@@ -78,6 +131,8 @@ function App() {
     const [photoResult, setPhotoResult] = useState<PhotoResult | null>(null);
     const [imageIndexes, setImageIndexes] = useState<Record<string, number>>({});
     const [answers, setAnswers] = useState<Record<string, string>>({});
+    const [fitWindow, setFitWindow] = useState<Record<string, boolean>>({});
+    const [photoCardWidth, setPhotoCardWidth] = useState(readPhotoCardWidth);
     const [error, setError] = useState('');
     const [isOpening, setIsOpening] = useState(false);
     const [isFindingPhotos, setIsFindingPhotos] = useState(false);
@@ -87,6 +142,64 @@ function App() {
     const [photoLoadErrors, setPhotoLoadErrors] = useState<Record<string, string>>({});
     const [recentQuizzes, setRecentQuizzes] = useState<RecentQuiz[]>(readRecentQuizzes);
     const requestedPhotoURLs = useRef(new Set<string>());
+    const [trips, setTrips] = useState<Trip[]>(readTrips);
+    const [selectedTripId, setSelectedTripId] = useState('');
+    const [editingTripId, setEditingTripId] = useState('');
+    const [tripDraft, setTripDraft] = useState({ place: '', date: '' });
+    const tripDialog = useRef<HTMLDialogElement>(null);
+    const [destinationImages, setDestinationImages] = useState<main.DestinationImage[]>([]);
+    const [destinationIndex, setDestinationIndex] = useState(0);
+    const [destinationStatus, setDestinationStatus] = useState('');
+    const sortedTrips = [...trips].sort((a, b) => a.date.localeCompare(b.date));
+    const upcomingTrips = sortedTrips.filter((item) => daysUntil(item.date) >= 0);
+    const trip = upcomingTrips.find((item) => item.id === selectedTripId) ?? upcomingTrips[0] ?? null;
+    const otherTrips = upcomingTrips.filter((item) => item.id !== trip?.id);
+    const tripPlace = trip?.place;
+
+    useEffect(() => {
+        try {
+            window.localStorage.setItem(photoCardWidthStorageKey, String(photoCardWidth));
+        } catch {
+            return;
+        }
+    }, [photoCardWidth]);
+
+    useEffect(() => {
+        try {
+            window.localStorage.setItem(tripsStorageKey, JSON.stringify(trips));
+        } catch {
+            // Storage unavailable; trips last for this session only.
+        }
+    }, [trips]);
+
+    function openDestinationArticle(pageUrl?: string) {
+        if (pageUrl?.startsWith('https://en.wikipedia.org/wiki/')) BrowserOpenURL(pageUrl);
+    }
+
+    useEffect(() => {
+        setDestinationImages([]);
+        setDestinationIndex(0);
+        setDestinationStatus('');
+        if (!tripPlace) return;
+        let cancelled = false;
+        setDestinationStatus('Finding photos...');
+        GetDestinationImages(tripPlace)
+            .then((images) => {
+                if (cancelled) return;
+                setDestinationImages(images ?? []);
+                setDestinationStatus(images?.length ? '' : `No Wikipedia photos found for "${tripPlace}". Check the spelling or try a more specific name.`);
+            })
+            .catch((error_) => {
+                if (!cancelled) setDestinationStatus(`Photos unavailable: ${error_ instanceof Error ? error_.message : String(error_)}`);
+            });
+        return () => { cancelled = true; };
+    }, [tripPlace]);
+
+    useEffect(() => {
+        if (destinationImages.length < 2) return;
+        const timer = window.setInterval(() => setDestinationIndex((current) => (current + 1) % destinationImages.length), 6000);
+        return () => window.clearInterval(timer);
+    }, [destinationImages]);
     const photoSearchRun = useRef(0);
 
     useEffect(() => EventsOn('photo-search-progress', (progress: PhotoProgress) => {
@@ -169,7 +282,7 @@ function App() {
             setPhotoResult(result);
             setImageIndexes({});
             setAnswers({});
-            const recentEntry = { name: quizToStart.name, path: quizToStart.path, lastRun: Date.now() };
+            const recentEntry = { name: quizToStart.name, path: quizToStart.path, lastRun: Date.now(), location: quizToStart.location };
             setRecentQuizzes((current) => [recentEntry, ...current.filter((item) => item.path !== recentEntry.path)].slice(0, maxRecentQuizzes));
         } catch (error_) {
             if (photoSearchRun.current !== searchRun) return;
@@ -182,6 +295,40 @@ function App() {
             }
         }
     }
+
+    function openTripDialog() {
+        resetTripForm();
+        tripDialog.current?.showModal();
+    }
+
+    function resetTripForm() {
+        setEditingTripId('');
+        setTripDraft({ place: '', date: '' });
+    }
+
+    function editTrip(item: Trip) {
+        setEditingTripId(item.id);
+        setTripDraft({ place: item.place, date: item.date });
+    }
+
+    function deleteTrip(id: string) {
+        setTrips((current) => current.filter((item) => item.id !== id));
+        if (editingTripId === id) resetTripForm();
+    }
+
+    function saveTrip(event: React.FormEvent) {
+        event.preventDefault();
+        const place = tripDraft.place.trim();
+        if (!place || !tripDraft.date) return;
+        if (editingTripId) {
+            setTrips((current) => current.map((item) => (item.id === editingTripId ? { ...item, place, date: tripDraft.date } : item)));
+        } else {
+            setTrips((current) => [...current, { id: newTripId(), place, date: tripDraft.date }]);
+        }
+        resetTripForm();
+    }
+
+    const tripDays = trip ? daysUntil(trip.date) : null;
 
     function endQuiz() {
         photoSearchRun.current += 1;
@@ -215,7 +362,7 @@ function App() {
                 {quiz && <button className="open-button" onClick={endQuiz}>End Quiz</button>}
             </header>
 
-            <main className="main-content">
+            <main className={quiz && isPlaying && photoResult ? 'main-content main-content-wide' : 'main-content'}>
                 {error && <div className="error-message" role="alert">{error}</div>}
                 {!quiz ? (
                     <section className="empty-state">
@@ -237,6 +384,7 @@ function App() {
                                             {recentQuizzes.map((recent) => (
                                                 <li key={recent.path}>
                                                     <button className="recent-quiz-button" onClick={() => openRecentQuiz(recent.path)} disabled={isOpening || isFindingPhotos}>
+                                                        <span className="recent-quiz-region">{recent.location || ''}</span>
                                                         <strong>{recent.name}</strong>
                                                         <time dateTime={new Date(recent.lastRun).toISOString()}>{formatRecentDate(recent.lastRun)}</time>
                                                     </button>
@@ -246,8 +394,50 @@ function App() {
                                     </section>
                                 )}
                             </div>
-                            <div className="field-stamp" aria-hidden="true">
-                                <span>OBSERVATION</span><strong>01</strong><span>SPECIES SET</span>
+                            <div className="trip-panel">
+                            <button className="field-stamp" onClick={openTripDialog} aria-label={trip ? `Next trip: ${trip.place}. Click to manage trips.` : 'Add a trip'}>
+                                {trip && tripDays !== null ? (
+                                    tripDays > 0 ? (
+                                        <><span>COUNTDOWN</span><strong>{tripDays}</strong><span>{tripDays === 1 ? 'DAY' : 'DAYS'} UNTIL {trip.place.toUpperCase()}</span></>
+                                    ) : (
+                                        <><span>TODAY</span><strong>Go!</strong><span>{trip.place.toUpperCase()}</span></>
+                                    )
+                                ) : (
+                                    <><span>NEXT TRIP</span><strong>?</strong><span>CLICK TO SET</span></>
+                                )}
+                            </button>
+                            {otherTrips.length > 0 && (
+                                <section className="other-trips" aria-label="Other upcoming trips">
+                                    <p className="section-label">ALSO COMING UP</p>
+                                    <ul>
+                                        {otherTrips.map((item) => (
+                                            <li key={item.id}>
+                                                <button onClick={() => setSelectedTripId(item.id)} title="Show this trip">
+                                                    <span>{item.place}</span>
+                                                    <span>{formatTripDate(item.date)}</span>
+                                                    <span>{daysUntil(item.date)} {daysUntil(item.date) === 1 ? 'day' : 'days'}</span>
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </section>
+                            )}
+                            {destinationStatus && <p className="destination-status" role="status">{destinationStatus}</p>}
+                            {destinationImages.length > 0 && (
+                                <figure className="destination-figure">
+                                    <button
+                                        className="destination-gallery"
+                                        onClick={() => openDestinationArticle(destinationImages[destinationIndex]?.pageUrl)}
+                                        aria-label={`Open the Wikipedia article for ${tripPlace}`}
+                                        title="Open on Wikipedia"
+                                    >
+                                        {destinationImages.map((image, index) => (
+                                            <img key={image.dataUrl.slice(-64)} src={image.dataUrl} alt={image.caption} className={index === destinationIndex ? 'active' : ''} />
+                                        ))}
+                                    </button>
+                                    <figcaption>{destinationImages[destinationIndex]?.caption}</figcaption>
+                                </figure>
+                            )}
                             </div>
                         </div>
                     </section>
@@ -257,20 +447,41 @@ function App() {
                         <section className="quiz-heading">
                             <div>
                                 <p className="section-label">REGION {quiz.location || 'NOT SET'} · {period.toUpperCase()}</p>
-                                <h1>Identify the species</h1>
+                                <h1>Quiz: {quiz.name || 'Untitled quiz'}</h1>
                             </div>
                             <div className="game-actions">
                                 <span className="score-tag">
                                     {quiz.species.filter((species) => answers[species.speciesCode || species.comName] === species.comName).length} / {quiz.species.length} IDENTIFIED
                                 </span>
+                                <label className="photo-size-control" htmlFor="photo-card-width">
+                                    <span>Photo size</span>
+                                    <input
+                                        id="photo-card-width"
+                                        type="range"
+                                        min="300"
+                                        max="640"
+                                        step="20"
+                                        value={photoCardWidth}
+                                        onChange={(event) => setPhotoCardWidth(Number(event.target.value))}
+                                        aria-valuetext={`${photoCardWidth} pixels`}
+                                    />
+                                    <output htmlFor="photo-card-width">{photoCardWidth}px</output>
+                                </label>
                                 <button className="secondary-button" onClick={() => setIsPlaying(false)}>Quiz details</button>
                             </div>
                         </section>
                         {quiz.notes && <p className="quiz-notes game-notes">{quiz.notes}</p>}
+                        {isFindingPhotos && (
+                            <div className="media-notice" role="status">{photoProgress || 'Finding photos...'}</div>
+                        )}
                         {photoWarnings.length > 0 && (
                             <div className="media-notice">{photoWarnings.join(' · ')}</div>
                         )}
-                        <section className="game-grid" aria-label="Bird photo quiz">
+                        <section
+                            className="game-grid"
+                            aria-label="Bird photo quiz"
+                            style={{ gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${photoCardWidth}px), ${photoCardWidth}px))` }}
+                        >
                             {quiz.species.map((species, index) => {
                                 const speciesKey = species.speciesCode || species.comName;
                                 const images = photoResult.photos[speciesKey] || [];
@@ -281,9 +492,10 @@ function App() {
                                 const isCorrect = answer === species.comName;
                                 const firstChoice = Math.max(0, Math.min(index - 3, quiz.species.length - 7));
                                 const choices = quiz.species.slice(firstChoice, firstChoice + 7);
+                                const isFitWindow = !!fitWindow[speciesKey];
 
                                 return (
-                                    <article className="game-card" key={speciesKey}>
+                                    <article className={isFitWindow ? 'game-card game-card-fit-window' : 'game-card'} key={speciesKey}>
                                         <div className="photo-frame">
                                             {photoDataURL ? (
                                                 <img src={photoDataURL} alt="Bird to identify" />
@@ -293,6 +505,11 @@ function App() {
                                                 <div className="photo-placeholder">No photo available</div>
                                             )}
                                         </div>
+                                        {photoDataURL && (
+                                            <button className="fit-toggle" aria-pressed={isFitWindow} onClick={() => setFitWindow((current) => ({ ...current, [speciesKey]: !isFitWindow }))}>
+                                                {isFitWindow ? 'Fit to width' : 'Full Size'}
+                                            </button>
+                                        )}
                                         <div className="photo-controls">
                                             <button aria-label="Previous photo" disabled={images.length < 2} onClick={() => setImageIndexes((current) => ({ ...current, [speciesKey]: (imageIndex + images.length - 1) % images.length }))}>Previous</button>
                                             <span>{images.length > 0 ? `${imageIndex + 1} / ${images.length}` : 'NO IMAGES'}</span>
@@ -331,10 +548,10 @@ function App() {
                         <div className="eyebrow">FIELD LIBRARY <span>/</span> QUIZ PREVIEW</div>
                         <section className="quiz-heading">
                             <div>
-                                <p className="section-label">REGION {quiz.location || 'NOT SET'}</p>
+                                <p className="section-label">REGION {quiz.location || 'NOT SET'} · {period.toUpperCase()}</p>
                                 <h1>Quiz details for {quiz.name || 'Untitled quiz'}</h1>
                             </div>
-                            <button className="primary-button" onClick={() => startQuiz(quiz)} disabled={isFindingPhotos}>
+                            <button className="primary-button" onClick={() => (photoResult && !isFindingPhotos ? setIsPlaying(true) : startQuiz(quiz))} disabled={isFindingPhotos}>
                                 {isFindingPhotos ? (photoProgress || 'Finding photos...') : 'Return to Quiz'}
                             </button>
                         </section>
@@ -384,6 +601,31 @@ function App() {
                     </>
                 )}
             </main>
+            <dialog ref={tripDialog} className="trip-dialog" aria-labelledby="trip-dialog-title">
+                <form onSubmit={saveTrip}>
+                    <h2 id="trip-dialog-title">Trips</h2>
+                    {sortedTrips.length > 0 && (
+                        <ul className="trip-manage-list">
+                            {sortedTrips.map((item) => (
+                                <li key={item.id}>
+                                    <span>{item.place}</span>
+                                    <span>{formatTripDate(item.date)}{daysUntil(item.date) < 0 ? ' (passed)' : ''}</span>
+                                    <button type="button" className="secondary-button" onClick={() => editTrip(item)}>Edit</button>
+                                    <button type="button" className="secondary-button" onClick={() => deleteTrip(item.id)}>Delete</button>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                    <p className="section-label">{editingTripId ? 'EDIT TRIP' : 'ADD A TRIP'}</p>
+                    <label>Where<input type="text" value={tripDraft.place} onChange={(event) => setTripDraft((current) => ({ ...current, place: event.target.value }))} placeholder="Country, State, or NWR" required /></label>
+                    <label>When<input type="date" value={tripDraft.date} onChange={(event) => setTripDraft((current) => ({ ...current, date: event.target.value }))} required /></label>
+                    <div className="trip-dialog-actions">
+                        {editingTripId && <button type="button" className="secondary-button" onClick={resetTripForm}>Cancel edit</button>}
+                        <button type="submit" className="primary-button">{editingTripId ? 'Save' : 'Add trip'}</button>
+                        <button type="button" className="secondary-button" onClick={() => tripDialog.current?.close()}>Done</button>
+                    </div>
+                </form>
+            </dialog>
         </div>
     );
 }
