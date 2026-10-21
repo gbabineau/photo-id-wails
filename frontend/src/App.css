@@ -80,6 +80,9 @@ h1 { margin-bottom: 12px; color: #1d342c; font-family: Georgia, 'Times New Roman
 .species-link > span { color: #87968b; font-size: 8px; }
 .game-actions { display: flex; align-items: center; gap: 12px; }
 .score-tag { color: #557163; font-size: 10px; font-weight: 800; letter-spacing: 1px; white-space: nowrap; }
+.photo-size-control { display: flex; align-items: center; gap: 7px; color: #557163; font-size: 11px; white-space: nowrap; }
+.photo-size-control input { width: 100px; accent-color: #26634d; }
+.photo-size-control output { min-width: 4ch; color: #315344; font-variant-numeric: tabular-nums; }
 .secondary-button { min-height: 36px; padding: 0 12px; border: 1px solid #b9c8bb; border-radius: 3px; color: #315344; background: transparent; font: inherit; font-size: 12px; cursor: pointer; }
 .secondary-button:hover { background: #e4eae1; }
 .game-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 18px; margin-top: 26px; }

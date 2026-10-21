@@ -53,6 +53,17 @@ const months = [
 const recentQuizStorageKey = 'photo-id.recent-quizzes.v1';
 const tripsStorageKey = 'photo-id.trips.v1';
 const legacyTripStorageKey = 'photo-id.next-trip.v1';
+const photoCardWidthStorageKey = 'photo-id.photo-card-width.v1';
+const defaultPhotoCardWidth = 400;
+
+function readPhotoCardWidth(): number {
+    try {
+        const width = Number(window.localStorage.getItem(photoCardWidthStorageKey));
+        return Number.isFinite(width) && width >= 300 && width <= 640 ? width : defaultPhotoCardWidth;
+    } catch {
+        return defaultPhotoCardWidth;
+    }
+}
 
 type Trip = { id: string; place: string; date: string };
 
@@ -121,6 +132,7 @@ function App() {
     const [imageIndexes, setImageIndexes] = useState<Record<string, number>>({});
     const [answers, setAnswers] = useState<Record<string, string>>({});
     const [fitWindow, setFitWindow] = useState<Record<string, boolean>>({});
+    const [photoCardWidth, setPhotoCardWidth] = useState(readPhotoCardWidth);
     const [error, setError] = useState('');
     const [isOpening, setIsOpening] = useState(false);
     const [isFindingPhotos, setIsFindingPhotos] = useState(false);
@@ -143,6 +155,14 @@ function App() {
     const trip = upcomingTrips.find((item) => item.id === selectedTripId) ?? upcomingTrips[0] ?? null;
     const otherTrips = upcomingTrips.filter((item) => item.id !== trip?.id);
     const tripPlace = trip?.place;
+
+    useEffect(() => {
+        try {
+            window.localStorage.setItem(photoCardWidthStorageKey, String(photoCardWidth));
+        } catch {
+            return;
+        }
+    }, [photoCardWidth]);
 
     useEffect(() => {
         try {
@@ -433,6 +453,20 @@ function App() {
                                 <span className="score-tag">
                                     {quiz.species.filter((species) => answers[species.speciesCode || species.comName] === species.comName).length} / {quiz.species.length} IDENTIFIED
                                 </span>
+                                <label className="photo-size-control" htmlFor="photo-card-width">
+                                    <span>Photo size</span>
+                                    <input
+                                        id="photo-card-width"
+                                        type="range"
+                                        min="300"
+                                        max="640"
+                                        step="20"
+                                        value={photoCardWidth}
+                                        onChange={(event) => setPhotoCardWidth(Number(event.target.value))}
+                                        aria-valuetext={`${photoCardWidth} pixels`}
+                                    />
+                                    <output htmlFor="photo-card-width">{photoCardWidth}px</output>
+                                </label>
                                 <button className="secondary-button" onClick={() => setIsPlaying(false)}>Quiz details</button>
                             </div>
                         </section>
@@ -443,7 +477,11 @@ function App() {
                         {photoWarnings.length > 0 && (
                             <div className="media-notice">{photoWarnings.join(' · ')}</div>
                         )}
-                        <section className="game-grid" aria-label="Bird photo quiz">
+                        <section
+                            className="game-grid"
+                            aria-label="Bird photo quiz"
+                            style={{ gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${photoCardWidth}px), ${photoCardWidth}px))` }}
+                        >
                             {quiz.species.map((species, index) => {
                                 const speciesKey = species.speciesCode || species.comName;
                                 const images = photoResult.photos[speciesKey] || [];
