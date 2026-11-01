@@ -8,3 +8,4 @@ frontend/node_modules
 /sonar.local.env
 /.scannerwork/
 testdata/Argentina
+coverage

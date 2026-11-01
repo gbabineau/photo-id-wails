@@ -17,13 +17,14 @@ import (
 )
 
 const (
-	wikipediaAPIURL      = "https://en.wikipedia.org/w/api.php"
 	wikimediaImageHost   = "upload.wikimedia.org"
 	wikimediaThumbHost   = "thumb.wikimedia.org"
 	destinationUserAgent = "photo-id/1.0 (desktop bird photo quiz app)"
 	maxDestinationImages = 6
 	maxDestinationPlace  = 100
 )
+
+var wikipediaAPIURL = "https://en.wikipedia.org/w/api.php"
 
 var excludedDestinationImage = regexp.MustCompile(`(?i)flag|map|coat[_ ]of|seal|logo|locator|location|symbol|icon|diagram|chart|emblem|portrait|signature`)
 
