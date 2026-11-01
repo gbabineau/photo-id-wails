@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-const eBirdTaxonomyURL = "https://api.ebird.org/v2/ref/taxonomy/ebird?fmt=json&locale=en"
+var eBirdTaxonomyURL = "https://api.ebird.org/v2/ref/taxonomy/ebird?fmt=json&locale=en"
 
 type Taxon struct {
 	CommonName     string  `json:"comName"`

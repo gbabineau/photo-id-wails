@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { GetDestinationImages, GetPhotoDataURL, LoadQuizPhotos, OpenQuiz, OpenRecentQuiz } from '../wailsjs/go/main/App';
 import { main } from '../wailsjs/go/models';
 import { BrowserOpenURL, EventsOn } from '../wailsjs/runtime/runtime';
@@ -150,6 +150,20 @@ function App() {
     const [destinationImages, setDestinationImages] = useState<main.DestinationImage[]>([]);
     const [destinationIndex, setDestinationIndex] = useState(0);
     const [destinationStatus, setDestinationStatus] = useState('');
+    const shuffledChoices = useMemo(() => {
+        const result: Record<string, Species[]> = {};
+        if (!quiz) return result;
+        quiz.species.forEach((species, index) => {
+            const firstChoice = Math.max(0, Math.min(index - 3, quiz.species.length - 7));
+            const choices = quiz.species.slice(firstChoice, firstChoice + 7);
+            for (let i = choices.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [choices[i], choices[j]] = [choices[j], choices[i]];
+            }
+            result[species.speciesCode || species.comName] = choices;
+        });
+        return result;
+    }, [quiz]);
     const sortedTrips = [...trips].sort((a, b) => a.date.localeCompare(b.date));
     const upcomingTrips = sortedTrips.filter((item) => daysUntil(item.date) >= 0);
     const trip = upcomingTrips.find((item) => item.id === selectedTripId) ?? upcomingTrips[0] ?? null;
@@ -490,8 +504,7 @@ function App() {
                                         const photoDataURL = imageURL ? photoDataURLs[imageURL] : '';
                                 const answer = answers[speciesKey] || '';
                                 const isCorrect = answer === species.comName;
-                                const firstChoice = Math.max(0, Math.min(index - 3, quiz.species.length - 7));
-                                const choices = quiz.species.slice(firstChoice, firstChoice + 7);
+                                const choices = shuffledChoices[speciesKey] ?? [];
                                 const isFitWindow = !!fitWindow[speciesKey];
 
                                 return (
