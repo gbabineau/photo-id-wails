@@ -6,6 +6,8 @@ export function GetDestinationImages(arg1:string):Promise<Array<main.Destination
 
 export function GetPhotoDataURL(arg1:string):Promise<string>;
 
+export function GetRegionName(arg1:string):Promise<string>;
+
 export function LoadQuizPhotos(arg1:main.Quiz):Promise<main.PhotoResult>;
 
 export function OpenQuiz():Promise<main.Quiz>;

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { GetDestinationImages, GetPhotoDataURL, LoadQuizPhotos, OpenQuiz, OpenRecentQuiz } from '../wailsjs/go/main/App';
+import { GetDestinationImages, GetPhotoDataURL, GetRegionName, LoadQuizPhotos, OpenQuiz, OpenRecentQuiz } from '../wailsjs/go/main/App';
 import { main } from '../wailsjs/go/models';
 import { BrowserOpenURL, EventsOn } from '../wailsjs/runtime/runtime';
 import grackleAvatar from './assets/images/grackle-avatar.jpg';
@@ -141,6 +141,21 @@ function App() {
     const [photoDataURLs, setPhotoDataURLs] = useState<Record<string, string>>({});
     const [photoLoadErrors, setPhotoLoadErrors] = useState<Record<string, string>>({});
     const [recentQuizzes, setRecentQuizzes] = useState<RecentQuiz[]>(readRecentQuizzes);
+    const [regionNames, setRegionNames] = useState<Record<string, string>>({});
+    const requestedRegions = useRef(new Set<string>());
+
+    useEffect(() => {
+        const codes = [quiz?.location, ...recentQuizzes.map((recent) => recent.location)]
+            .filter((code): code is string => !!code && !requestedRegions.current.has(code));
+        for (const code of codes) {
+            requestedRegions.current.add(code);
+            GetRegionName(code)
+                .then((name) => name && setRegionNames((current) => ({ ...current, [code]: name })))
+                .catch(() => undefined);
+        }
+    }, [quiz?.location, recentQuizzes]);
+
+    const regionLabel = (code?: string) => (code && regionNames[code]) || code || '';
     const requestedPhotoURLs = useRef(new Set<string>());
     const [trips, setTrips] = useState<Trip[]>(readTrips);
     const [selectedTripId, setSelectedTripId] = useState('');
@@ -398,7 +413,7 @@ function App() {
                                             {recentQuizzes.map((recent) => (
                                                 <li key={recent.path}>
                                                     <button className="recent-quiz-button" onClick={() => openRecentQuiz(recent.path)} disabled={isOpening || isFindingPhotos}>
-                                                        <span className="recent-quiz-region">{recent.location || ''}</span>
+                                                        <span className="recent-quiz-region">{regionLabel(recent.location)}</span>
                                                         <strong>{recent.name}</strong>
                                                         <time dateTime={new Date(recent.lastRun).toISOString()}>{formatRecentDate(recent.lastRun)}</time>
                                                     </button>
@@ -460,7 +475,7 @@ function App() {
                         <div className="eyebrow">FIELD LIBRARY <span>/</span> PHOTO QUIZ</div>
                         <section className="quiz-heading">
                             <div>
-                                <p className="section-label">REGION {quiz.location || 'NOT SET'} · {period.toUpperCase()}</p>
+                                <p className="section-label">REGION {regionLabel(quiz.location).toUpperCase() || 'NOT SET'} · {period.toUpperCase()}</p>
                                 <h1>Quiz: {quiz.name || 'Untitled quiz'}</h1>
                             </div>
                             <div className="game-actions">
@@ -561,7 +576,7 @@ function App() {
                         <div className="eyebrow">FIELD LIBRARY <span>/</span> QUIZ PREVIEW</div>
                         <section className="quiz-heading">
                             <div>
-                                <p className="section-label">REGION {quiz.location || 'NOT SET'} · {period.toUpperCase()}</p>
+                                <p className="section-label">REGION {regionLabel(quiz.location).toUpperCase() || 'NOT SET'} · {period.toUpperCase()}</p>
                                 <h1>Quiz details for {quiz.name || 'Untitled quiz'}</h1>
                             </div>
                             <button className="primary-button" onClick={() => (photoResult && !isFindingPhotos ? setIsPlaying(true) : startQuiz(quiz))} disabled={isFindingPhotos}>
@@ -570,7 +585,7 @@ function App() {
                         </section>
                         <section className="summary-strip" aria-label="Quiz details">
                             <div className="summary-item"><span className="summary-label">SEASON</span><strong>{period}</strong></div>
-                            <div className="summary-item"><span className="summary-label">REGION CODE</span><strong>{quiz.location || 'Not specified'}</strong></div>
+                            <div className="summary-item"><span className="summary-label">REGION</span><strong>{regionLabel(quiz.location) || 'Not specified'}</strong></div>
                             <div className="summary-item"><span className="summary-label">SPECIES</span><strong>{quiz.species.length}</strong></div>
                         </section>
                         {quiz.notes && <p className="quiz-notes">{quiz.notes}</p>}
