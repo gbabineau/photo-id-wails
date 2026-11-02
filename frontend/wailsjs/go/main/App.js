@@ -10,6 +10,10 @@ export function GetPhotoDataURL(arg1) {
   return window['go']['main']['App']['GetPhotoDataURL'](arg1);
 }
 
+export function GetRegionName(arg1) {
+  return window['go']['main']['App']['GetRegionName'](arg1);
+}
+
 export function LoadQuizPhotos(arg1) {
   return window['go']['main']['App']['LoadQuizPhotos'](arg1);
 }
